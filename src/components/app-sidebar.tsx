@@ -7,9 +7,7 @@ import {
   LayoutDashboard,
   Search,
   Settings,
-  Workflow,
 } from 'lucide-react';
-import { Bot, Image } from 'lucide-react';
 import type * as React from 'react';
 import { NavMain } from '~/components/nav-main';
 // import { NavSecondary } from '~/components/nav-secondary';
@@ -32,29 +30,41 @@ const data = {
   },
   navMain: [
     {
-      title: 'Dashboard',
-      url: '/dashboard/charts',
-      icon: LayoutDashboard,
-    },
-    {
-      title: 'Chat',
-      url: '/dashboard/chat',
-      icon: Bot,
-    },
-    {
-      title: 'Image Chat',
-      url: '/dashboard/image-chat',
-      icon: Image,
-    },
-    {
-      title: 'Documents',
-      url: '/dashboard/documents',
-      icon: FileText,
-    },
-    {
-      title: 'Workflow',
-      url: '/dashboard/workflow',
-      icon: Workflow,
+      title: 'Playground',
+      url: '#',
+      isActive: true,
+      items: [
+        {
+          title: 'History',
+          url: '#',
+        },
+        {
+          title: 'Starred',
+          url: '#',
+        },
+        {
+          title: 'Settings',
+          url: '#',
+        },
+        {
+          title: 'Models',
+          url: '#',
+          items: [
+            {
+              title: 'Genesis',
+              url: '#',
+            },
+            {
+              title: 'Explorer',
+              url: '#',
+            },
+            {
+              title: 'Quantum',
+              url: '#',
+            },
+          ],
+        },
+      ],
     },
   ],
   navClouds: [
@@ -140,7 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {/* <NavMain items={data.navMain} /> */}
+        <NavMain items={data.navMain} />
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       {/* <SidebarFooter>
