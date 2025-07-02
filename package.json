@@ -82,7 +82,8 @@
     "vaul": "^1.1.2",
     "vibe-rules": "^0.3.41",
     "vite": "^6.3.5",
-    "zod": "^3.25.56"
+    "zod": "^3.25.56",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",

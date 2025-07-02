@@ -1,13 +1,21 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { isUrl } from '~/utils/is-url';
-import { AlertCircle, Globe, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertCircle, Globe, RefreshCw, Loader2, FileCode, FolderOpen } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Skeleton } from '~/components/ui/skeleton';
 import { scrapeUrl } from '~/server/function/scrape-url.server.func';
+import { ScrapedData, useScrapedDataStore } from '~/lib/stores/scraped-data.store';
+import { useEffect, useRef } from 'react';
+import { Badge } from '~/components/ui/badge';
 
 export const Route = createFileRoute({
   component: DashboardDynamicPage,
+  validateSearch: (search: Record<string, unknown>): { file?: string } => {
+    return {
+      file: typeof search.file === 'string' ? search.file : undefined,
+    };
+  },
   loader: async ({ params }) => {
     const decodedUrl = decodeURIComponent(params.url);
 
@@ -20,6 +28,10 @@ export const Route = createFileRoute({
   },
   pendingComponent: LoadingComponent,
   errorComponent: ErrorComponent,
+  onLeave: () => {
+    // Clear scraped data when leaving the route
+    useScrapedDataStore.getState().clearData();
+  },
 });
 
 function LoadingComponent() {
@@ -59,6 +71,7 @@ function ErrorComponent({ error }: { error: Error }) {
 
 function DashboardDynamicPage() {
   const { isValidUrl, url: decodedUrl } = Route.useLoaderData();
+  const { file: filePath } = Route.useSearch();
 
   if (!isValidUrl) {
     return (
@@ -76,10 +89,16 @@ function DashboardDynamicPage() {
     );
   }
 
-  return <ValidUrlContent url={decodedUrl} />;
+  return <ValidUrlContent url={decodedUrl} filePath={filePath} />;
 }
 
-function ValidUrlContent({ url }: { url: string }) {
+function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) {
+  const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
+    useScrapedDataStore();
+
+  // Use ref to track if we've already set the initial file path
+  const hasSetInitialFilePath = useRef(false);
+
   const { data, isLoading, error, refetch, isFetching } = useSuspenseQuery({
     queryKey: ['scrape-url', url],
     queryFn: () => scrapeUrl({ data: { url } }),
@@ -88,6 +107,42 @@ function ValidUrlContent({ url }: { url: string }) {
     refetchOnWindowFocus: false,
     retry: 2,
   });
+
+  // Store scraped data in global state when it's fetched
+  // Also handle initial file path selection in the same effect to avoid race conditions
+  useEffect(() => {
+    if (data?.success && data?.data) {
+      setScrapedData(
+        data.data as ScrapedData,
+        data.metadata || { url, scrapedAt: new Date().toISOString() }
+      );
+
+      // If we have a file path from URL and haven't set it yet, set it now
+      if (filePath && !hasSetInitialFilePath.current) {
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          setSelectedFilePath(filePath);
+          hasSetInitialFilePath.current = true;
+        }, 0);
+      }
+    }
+  }, [data, setScrapedData, url, filePath, setSelectedFilePath]);
+
+  // Handle file path changes after initial load
+  useEffect(() => {
+    if (filePath && scrapedData && hasSetInitialFilePath.current) {
+      setSelectedFilePath(filePath);
+    }
+  }, [filePath, scrapedData, setSelectedFilePath]);
+
+  // Reset the ref when URL actually changes
+  const prevUrlRef = useRef(url);
+  useEffect(() => {
+    if (prevUrlRef.current !== url) {
+      hasSetInitialFilePath.current = false;
+      prevUrlRef.current = url;
+    }
+  }, [url]);
 
   if (error) {
     return (
@@ -132,6 +187,8 @@ function ValidUrlContent({ url }: { url: string }) {
     return <LoadingComponent />;
   }
 
+  const selectedFile = selectedFilePath ? getFileByPath(selectedFilePath) : null;
+
   return (
     <div className="p-6 space-y-6">
       <Card>
@@ -175,16 +232,55 @@ function ValidUrlContent({ url }: { url: string }) {
         </CardContent>
       </Card>
 
-      {data?.data && (
+      {selectedFile && selectedFile.type === 'file' && (
         <Card>
           <CardHeader>
-            <CardTitle>File Structure</CardTitle>
-            <CardDescription>Extracted content from the scraped page</CardDescription>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileCode className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-lg">{selectedFile.name}</CardTitle>
+                  <CardDescription>{selectedFile.path}</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedFile.language && (
+                  <Badge variant="secondary">{selectedFile.language}</Badge>
+                )}
+                {selectedFile.size && (
+                  <Badge variant="outline">{(selectedFile.size / 1024).toFixed(1)} KB</Badge>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[600px]">
-              <code className="text-sm">{JSON.stringify(data.data, null, 2)}</code>
-            </pre>
+            {selectedFile.content ? (
+              <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[600px]">
+                <code className="text-sm">{selectedFile.content}</code>
+              </pre>
+            ) : (
+              <p className="text-muted-foreground">No content available</p>
+            )}
+
+            {selectedFile.lastModified && (
+              <div className="mt-4 text-sm text-muted-foreground">
+                Last modified: {new Date(selectedFile.lastModified).toLocaleString()}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {!selectedFile && data?.data && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Select a File</CardTitle>
+            <CardDescription>Choose a file from the sidebar to view its content</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center h-32">
+              <FolderOpen className="h-16 w-16 text-muted-foreground/50" />
+            </div>
           </CardContent>
         </Card>
       )}

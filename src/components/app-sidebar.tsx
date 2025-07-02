@@ -9,7 +9,8 @@ import {
   Settings,
 } from 'lucide-react';
 import type * as React from 'react';
-import { NavMain } from '~/components/nav-main';
+import { FileTree } from '~/components/file-tree';
+import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 // import { NavSecondary } from '~/components/nav-secondary';
 // import { NavUser } from "~/components/nav-user";
 import {
@@ -22,7 +23,7 @@ import {
   SidebarMenuItem,
 } from '~/components/ui/sidebar';
 
-const data = {
+const _data = {
   user: {
     name: 'ex0',
     email: 'm@example.com',
@@ -135,6 +136,8 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { scrapedData } = useScrapedDataStore();
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -150,7 +153,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        {scrapedData ? (
+          <FileTree />
+        ) : null}
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       {/* <SidebarFooter>
