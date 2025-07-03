@@ -1,13 +1,13 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { isUrl } from '~/utils/is-url';
 import { AlertCircle, Globe, RefreshCw, Loader2, FileCode, FolderOpen } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Skeleton } from '~/components/ui/skeleton';
-import { scrapeUrl } from '~/server/function/scrape-url.server.func';
-import { ScrapedData, useScrapedDataStore } from '~/lib/stores/scraped-data.store';
+import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import { useEffect, useRef } from 'react';
 import { Badge } from '~/components/ui/badge';
+import { Progress } from '~/components/ui/progress';
+import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 
 export const Route = createFileRoute({
   component: DashboardDynamicPage,
@@ -98,35 +98,37 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
 
   // Use ref to track if we've already set the initial file path
   const hasSetInitialFilePath = useRef(false);
+  const hasStartedScraping = useRef(false);
 
-  const { data, isLoading, error, refetch, isFetching } = useSuspenseQuery({
-    queryKey: ['scrape-url', url],
-    queryFn: () => scrapeUrl({ data: { url } }),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
-    refetchOnWindowFocus: false,
-    retry: 2,
-  });
-
-  // Store scraped data in global state when it's fetched
-  // Also handle initial file path selection in the same effect to avoid race conditions
-  useEffect(() => {
-    if (data?.success && data?.data) {
-      setScrapedData(
-        data.data as ScrapedData,
-        data.metadata || { url, scrapedAt: new Date().toISOString() }
-      );
+  const { startScraping, cancel, isLoading, error, progress, metadata } = useStreamingScrape(url, {
+    onComplete: (data, meta) => {
+      setScrapedData(data, meta);
 
       // If we have a file path from URL and haven't set it yet, set it now
       if (filePath && !hasSetInitialFilePath.current) {
-        // Small delay to ensure state is updated
         setTimeout(() => {
           setSelectedFilePath(filePath);
           hasSetInitialFilePath.current = true;
         }, 0);
       }
+    },
+    onError: (err) => {
+      console.error('[ValidUrlContent] Scraping error:', err);
+    },
+  });
+
+  // Start scraping only on client side when component mounts or URL changes
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      return;
     }
-  }, [data, setScrapedData, url, filePath, setSelectedFilePath]);
+
+    if (!hasStartedScraping.current) {
+      hasStartedScraping.current = true;
+      startScraping();
+    }
+  }, [url, startScraping]);
 
   // Handle file path changes after initial load
   useEffect(() => {
@@ -135,14 +137,16 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
     }
   }, [filePath, scrapedData, setSelectedFilePath]);
 
-  // Reset the ref when URL actually changes
-  const prevUrlRef = useRef(url);
+  // Cleanup when component unmounts or URL changes
   useEffect(() => {
-    if (prevUrlRef.current !== url) {
-      hasSetInitialFilePath.current = false;
-      prevUrlRef.current = url;
-    }
-  }, [url]);
+    return () => {
+      if (typeof window !== 'undefined') {
+        hasSetInitialFilePath.current = false;
+        hasStartedScraping.current = false;
+        cancel();
+      }
+    };
+  }, [url, cancel]); // Keep cancel in deps to ensure we have the latest
 
   if (error) {
     return (
@@ -163,8 +167,8 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
                 <label className="text-sm font-medium text-muted-foreground">URL</label>
                 <p className="mt-1 p-3 bg-muted rounded-md font-mono text-sm break-all">{url}</p>
               </div>
-              <Button onClick={() => refetch()} variant="outline" disabled={isFetching}>
-                {isFetching ? (
+              <Button onClick={() => startScraping()} variant="outline" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Retrying...
@@ -184,7 +188,29 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
   }
 
   if (isLoading) {
-    return <LoadingComponent />;
+    return (
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Scraping Content
+            </CardTitle>
+            <CardDescription>
+              {metadata ? `Fetching from ${metadata.title || url}` : `Fetching from ${url}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Progress value={progress * 100} className="h-2" />
+              <p className="text-sm text-muted-foreground">
+                Loading file tree... {Math.round(progress * 100)}%
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const selectedFile = selectedFilePath ? getFileByPath(selectedFilePath) : null;
@@ -198,11 +224,16 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
               <Globe className="h-6 w-6 text-primary" />
               <div>
                 <CardTitle>Scraped Content</CardTitle>
-                <CardDescription>{data?.metadata?.title || 'Website Content'}</CardDescription>
+                <CardDescription>{metadata?.title || 'Website Content'}</CardDescription>
               </div>
             </div>
-            <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
-              {isFetching ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => startScraping()}
+              disabled={isLoading}
+            >
+              {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
@@ -216,17 +247,17 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
             <p className="mt-1 p-3 bg-muted rounded-md font-mono text-sm break-all">{url}</p>
           </div>
 
-          {data?.metadata?.scrapedAt && (
+          {metadata?.scrapedAt && (
             <div>
               <label className="text-sm font-medium text-muted-foreground">Last Scraped</label>
-              <p className="mt-1 text-sm">{new Date(data.metadata.scrapedAt).toLocaleString()}</p>
+              <p className="mt-1 text-sm">{new Date(metadata.scrapedAt).toLocaleString()}</p>
             </div>
           )}
 
-          {data?.metadata?.description && (
+          {metadata?.description && (
             <div>
               <label className="text-sm font-medium text-muted-foreground">Description</label>
-              <p className="mt-1 text-sm">{data.metadata.description}</p>
+              <p className="mt-1 text-sm">{metadata.description}</p>
             </div>
           )}
         </CardContent>
@@ -271,7 +302,7 @@ function ValidUrlContent({ url, filePath }: { url: string; filePath?: string }) 
         </Card>
       )}
 
-      {!selectedFile && data?.data && (
+      {!selectedFile && scrapedData && (
         <Card>
           <CardHeader>
             <CardTitle>Select a File</CardTitle>
