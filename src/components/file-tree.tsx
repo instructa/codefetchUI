@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import {
   ChevronRight,
   ChevronDown,
@@ -22,9 +22,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from '~/components/ui/sidebar';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
@@ -85,8 +82,13 @@ interface FileTreeNodeProps {
 
 function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
   const { expandedPaths, toggleExpandedPath, selectedFilePath } = useScrapedDataStore();
+  const search = useSearch({ from: '/(dashboard)/$url' }) as { file?: string };
+
+  // Decode the file parameter from URL
+  const fileFromUrl = search?.file ? decodeURIComponent(search.file) : undefined;
+
   const isExpanded = expandedPaths.has(node.path);
-  const isSelected = selectedFilePath === node.path;
+  const isSelected = selectedFilePath === node.path || fileFromUrl === node.path;
   const hasChildren = node.children && node.children.length > 0;
 
   const handleToggle = () => {
@@ -118,19 +120,23 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
             <CollapsibleTrigger asChild>
               <SidebarMenuButton
                 onClick={handleToggle}
-                className={cn('w-full', isSelected && 'bg-accent')}
+                className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className={cn('h-4 w-4')} />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className={cn('h-4 w-4')} />
                 )}
-                {isExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
+                {isExpanded ? (
+                  <FolderOpen className={cn('h-4 w-4')} />
+                ) : (
+                  <Folder className={cn('h-4 w-4')} />
+                )}
                 <span className="truncate">{node.name}</span>
               </SidebarMenuButton>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarMenuSub>
+              <SidebarMenu>
                 {node.children?.map((child) => (
                   <FileTreeNode
                     key={child.path}
@@ -139,7 +145,7 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
                     onSelect={onSelect}
                   />
                 ))}
-              </SidebarMenuSub>
+              </SidebarMenu>
             </CollapsibleContent>
           </SidebarMenuItem>
         </Collapsible>
@@ -152,9 +158,9 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
       <SidebarMenuItem>
         <SidebarMenuButton
           onClick={handleToggle}
-          className={cn('w-full', isSelected && 'bg-accent')}
+          className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
         >
-          <FileIcon className="h-4 w-4" />
+          <FileIcon className={cn('h-4 w-4')} />
           <span className="truncate">{node.name}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -165,20 +171,24 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
   if (node.type === 'directory' && hasChildren) {
     return (
       <Collapsible open={isExpanded}>
-        <SidebarMenuSubItem>
+        <SidebarMenuItem>
           <CollapsibleTrigger asChild>
-            <SidebarMenuSubButton
+            <SidebarMenuButton
               onClick={handleToggle}
-              className={cn('w-full', isSelected && 'bg-accent')}
+              className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className={cn('h-4 w-4')} />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className={cn('h-4 w-4')} />
               )}
-              {isExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
+              {isExpanded ? (
+                <FolderOpen className={cn('h-4 w-4')} />
+              ) : (
+                <Folder className={cn('h-4 w-4')} />
+              )}
               <span className="truncate">{node.name}</span>
-            </SidebarMenuSubButton>
+            </SidebarMenuButton>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="ml-4">
@@ -187,7 +197,7 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
               ))}
             </div>
           </CollapsibleContent>
-        </SidebarMenuSubItem>
+        </SidebarMenuItem>
       </Collapsible>
     );
   }
@@ -195,15 +205,15 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
   // Nested file
   const FileIcon = getFileIcon(node.name);
   return (
-    <SidebarMenuSubItem>
-      <SidebarMenuSubButton
+    <SidebarMenuItem>
+      <SidebarMenuButton
         onClick={handleToggle}
-        className={cn('w-full', isSelected && 'bg-accent')}
+        className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
       >
-        <FileIcon className="h-4 w-4" />
+        <FileIcon className={cn('h-4 w-4')} />
         <span className="truncate">{node.name}</span>
-      </SidebarMenuSubButton>
-    </SidebarMenuSubItem>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }
 
