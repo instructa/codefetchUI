@@ -114,6 +114,7 @@ export function useStreamingScrape(url: string | null, options: UseStreamingScra
                   lastModified: nodeData.lastModified,
                   language: nodeData.language,
                   tokens: nodeData.tokens,
+                  content: nodeData.content,
                   children: nodeData.hasChildren ? [] : undefined,
                 };
 

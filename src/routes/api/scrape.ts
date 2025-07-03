@@ -41,16 +41,15 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
 
             // Function to process tree nodes in chunks
             const processNode = async (node: any, parentPath: string = '') => {
-              const { children, content, ...nodeData } = node;
+              const { children, ...nodeData } = node;
 
-              // Send node data without content and children
+              // Send node data with content but without children
               const chunk = {
                 type: 'node',
                 data: {
                   ...nodeData,
                   parentPath,
                   hasChildren: !!(children && children.length > 0),
-                  hasContent: !!content,
                 },
               };
               controller.enqueue(encoder.encode(JSON.stringify(chunk) + '\n'));
