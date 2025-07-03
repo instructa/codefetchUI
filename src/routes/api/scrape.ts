@@ -14,8 +14,6 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // Fetch data from codefetch
       const codefetch = await codefetchFetch({ source: targetUrl, format: 'json' });
 
-      console.log(codefetch);
-
       // Check if result is valid
       if (typeof codefetch === 'string' || !('root' in codefetch)) {
         return Response.json({ error: 'Invalid response from codefetch' }, { status: 500 });

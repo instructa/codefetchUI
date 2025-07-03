@@ -191,11 +191,11 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
             </SidebarMenuButton>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="ml-4">
+            <SidebarMenu className="ml-4">
               {node.children?.map((child) => (
                 <FileTreeNode key={child.path} node={child} level={level + 1} onSelect={onSelect} />
               ))}
-            </div>
+            </SidebarMenu>
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
