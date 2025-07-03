@@ -1,8 +1,51 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
 import { fetch as codefetchFetch } from '@codefetch/sdk';
+import { apiRateLimiter } from '~/lib/rate-limiter';
+import { getApiSecurityConfig } from '~/lib/api-security';
 
 export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request }) => {
+    const securityConfig = getApiSecurityConfig();
+    
+    // Security check 1: Validate Origin/Referer
+    const origin = request.headers.get('origin');
+    const referer = request.headers.get('referer');
+    const host = request.headers.get('host');
+    
+    // Dynamically determine the request's origin (same-origin requests)
+    const requestOrigin = origin || (referer ? new URL(referer).origin : null);
+    const serverOrigin = host ? `${request.url.startsWith('https:') ? 'https' : 'http'}://${host}` : null;
+    
+    // Allow same-origin requests automatically
+    const isSameOrigin = requestOrigin && serverOrigin && requestOrigin === serverOrigin;
+    
+    // Check against manually configured allowed origins
+    const isAllowedOrigin = requestOrigin && securityConfig.allowedOrigins.some(allowed => requestOrigin.startsWith(allowed));
+    
+    if (!isSameOrigin && !isAllowedOrigin) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    
+    // Security check 2: Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    if (!apiRateLimiter.isAllowed(clientIp)) {
+      const resetTime = apiRateLimiter.getResetTime(clientIp);
+      return Response.json(
+        { error: 'Too many requests. Please try again later.' },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(Math.floor(resetTime / 1000)),
+          }
+        }
+      );
+    }
+    
     const url = new URL(request.url);
     const targetUrl = url.searchParams.get('url');
 
@@ -74,12 +117,18 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         },
       });
 
-      // Return streaming response
+      // Return streaming response with rate limit headers
+      const remaining = apiRateLimiter.getRemainingRequests(clientIp);
+      const resetTime = apiRateLimiter.getResetTime(clientIp);
+      
       return new Response(stream, {
         headers: {
           'Content-Type': 'application/x-ndjson',
           'Cache-Control': 'no-cache',
           Connection: 'keep-alive',
+          'X-RateLimit-Limit': '10',
+          'X-RateLimit-Remaining': String(remaining),
+          'X-RateLimit-Reset': String(Math.floor(resetTime / 1000)),
         },
       });
     } catch (error) {
