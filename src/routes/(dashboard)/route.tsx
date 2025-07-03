@@ -1,4 +1,4 @@
-import { Outlet, redirect, useNavigate } from '@tanstack/react-router';
+import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { AppSidebar } from '~/components/app-sidebar';
 import { SiteHeader } from '~/components/site-header';
 import { SidebarInset, SidebarProvider } from '~/components/ui/sidebar';
@@ -8,8 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '~/component
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import {} from '@tanstack/react-router';
 import { isUrl } from '~/utils/is-url';
+import { useEffect } from 'react';
 
 const searchSchema = z.object({
   search: z.string().refine(isUrl, {
@@ -42,12 +42,24 @@ export const Route = createFileRoute({
 
 function RouteComponent() {
   const navigate = useNavigate();
+  const params = useParams({ strict: false });
+
+  // Get the URL from params if we're on a /$url route
+  const currentUrl = params.url ? decodeURIComponent(params.url as string) : '';
+
   const form = useForm<z.infer<typeof searchSchema>>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
-      search: '',
+      search: currentUrl,
     },
   });
+
+  // Update form when URL changes
+  useEffect(() => {
+    if (currentUrl && currentUrl !== form.getValues('search')) {
+      form.setValue('search', currentUrl);
+    }
+  }, [currentUrl, form]);
 
   function onSubmit(values: z.infer<typeof searchSchema>) {
     const encodedUrl = encodeURIComponent(values.search);
