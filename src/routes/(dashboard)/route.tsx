@@ -13,7 +13,7 @@ import { useEffect } from 'react';
 
 const searchSchema = z.object({
   search: z.string().refine(isUrl, {
-    message: 'Please enter a valid URL',
+    message: 'Please enter a valid GitHub URL',
   }),
 });
 
