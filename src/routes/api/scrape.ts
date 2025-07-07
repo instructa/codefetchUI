@@ -1,11 +1,16 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
 import { fetch as codefetchFetch } from 'codefetch-sdk';
-import { apiRateLimiter } from '~/lib/rate-limiter';
+import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
 
 export const ServerRoute = createServerFileRoute('/api/scrape').methods({
-  GET: async ({ request }) => {
+  GET: async ({ request, context }) => {
     const securityConfig = getApiSecurityConfig();
+    
+    // Get rate limiter context (KV namespace in production)
+    const rateLimiterContext: RateLimiterContext = {
+      RATE_LIMIT_KV: (context as any)?.cloudflare?.env?.CACHE,
+    };
 
     // Security check 1: Validate Origin/Referer
     const origin = request.headers.get('origin');
@@ -36,8 +41,8 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       request.headers.get('x-real-ip') ||
       'unknown';
 
-    if (!apiRateLimiter.isAllowed(clientIp)) {
-      const resetTime = apiRateLimiter.getResetTime(clientIp);
+    if (!(await universalRateLimiter.isAllowed(clientIp, rateLimiterContext))) {
+      const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
       return Response.json(
         { error: 'Too many requests. Please try again later.' },
         {
@@ -59,29 +64,14 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
     }
 
     try {
-      let codefetch;
-
-      try {
-        // First attempt: fetch with cache enabled (default behavior)
-        codefetch = await codefetchFetch({ source: targetUrl, format: 'json' });
-      } catch (error: any) {
-        // Check if it's a cache-related error (ENOENT)
-        if (error.code === 'ENOENT' && error.path?.includes('.codefetch-cache')) {
-          console.warn('Cache error encountered, retrying without cache:', error.message);
-
-          // Second attempt: fetch with cache disabled
-          codefetch = await codefetchFetch({
-            source: targetUrl,
-            format: 'json',
-            noCache: true,
-          } as any);
-        } else {
-          // Re-throw if it's not a cache-related error
-          throw error;
-        }
-      }
-      // Fetch data from codefetch
-      // const codefetch = await codefetchFetch({ source: targetUrl, format: 'json' });
+      // In Cloudflare Workers, always disable filesystem cache
+      const isWorkerEnvironment = (context as any)?.cloudflare?.env;
+      
+      const codefetch = await codefetchFetch({
+        source: targetUrl,
+        format: 'json',
+        noCache: isWorkerEnvironment ? true : undefined,
+      } as any);
 
       // Check if result is valid
       if (typeof codefetch === 'string' || !('root' in codefetch)) {
@@ -144,8 +134,8 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       });
 
       // Return streaming response with rate limit headers
-      const remaining = apiRateLimiter.getRemainingRequests(clientIp);
-      const resetTime = apiRateLimiter.getResetTime(clientIp);
+      const remaining = await universalRateLimiter.getRemainingRequests(clientIp, rateLimiterContext);
+      const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
 
       return new Response(stream, {
         headers: {

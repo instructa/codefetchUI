@@ -303,6 +303,45 @@ The application supports OAuth authentication with GitHub and Google. Here's how
 Once configured, users will see GitHub and Google sign-in options on the authentication pages. The OAuth providers are conditionally enabled based on the presence of their respective environment variables.
 
 
+## 🧪 Testing
+
+### API Testing
+
+The application includes a rate-limited API endpoint at `/api/scrape`. See the [Testing Guide](docs/testing-guide.md) for detailed testing instructions.
+
+#### Quick Rate Limiter Test
+
+```bash
+# Start dev server
+pnpm dev
+
+# In another terminal, test rate limiting (10 req/min limit)
+for i in {1..12}; do
+  echo "Request $i:"
+  curl -i "http://localhost:3000/api/scrape?url=https://github.com/facebook/react" \
+    -H "Origin: http://localhost:3000" \
+    2>/dev/null | grep -E "HTTP|X-RateLimit"
+done
+```
+
+### Cloudflare Deployment
+
+The project is configured for deployment on Cloudflare Workers:
+
+```bash
+# Build for Cloudflare
+npm run build
+
+# Deploy to development
+npm run deploy
+
+# Deploy to production
+npm run deploy:prod
+```
+
+See [Cloudflare Deployment Guide](docs/04-fix-queue.md) for more details.
+
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
