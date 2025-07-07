@@ -10,6 +10,8 @@
     "test": "vitest",
     "test:auth": "vitest tests/auth-integration.test.ts",
     "test:auth:watch": "vitest tests/auth-integration.test.ts --watch",
+    "test:scrape": "vitest tests/scrape-api.test.ts",
+    "test:scrape:watch": "vitest tests/scrape-api.test.ts --watch",
     "db:pull": "npx drizzle-kit pull",
     "db:generate": "npx drizzle-kit generate",
     "db:migrate": "npx drizzle-kit migrate",

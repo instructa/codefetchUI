@@ -7,10 +7,9 @@ import {
   LayoutDashboard,
   Search,
   Settings,
+  MessageSquare,
 } from 'lucide-react';
 import type * as React from 'react';
-import { FileTree } from '~/components/file-tree';
-import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 // import { NavSecondary } from '~/components/nav-secondary';
 // import { NavUser } from "~/components/nav-user";
 import {
@@ -136,8 +135,6 @@ const _data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { scrapedData } = useScrapedDataStore();
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -153,9 +150,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {scrapedData ? (
-          <FileTree />
-        ) : null}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link to="/chat">
+                <MessageSquare className="!size-5" />
+                <span>Chat</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       {/* <SidebarFooter>

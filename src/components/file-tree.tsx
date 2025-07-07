@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch, useRouter } from '@tanstack/react-router';
 import {
   ChevronRight,
   ChevronDown,
@@ -82,10 +82,23 @@ interface FileTreeNodeProps {
 
 function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
   const { expandedPaths, toggleExpandedPath, selectedFilePath } = useScrapedDataStore();
-  const search = useSearch({ from: '/(dashboard)/$url' }) as { file?: string };
+  const router = useRouter();
 
-  // Decode the file parameter from URL
-  const fileFromUrl = search?.file ? decodeURIComponent(search.file) : undefined;
+  // Check if we're in a scrape route
+  const isInScrapeRoute = router.state.location.pathname.startsWith('/scrape/');
+
+  // Try to get search params from different route contexts
+  let fileFromUrl: string | undefined;
+  if (isInScrapeRoute) {
+    try {
+      // Try scrape route
+      const searchFromScrape = useSearch({ from: '/scrape/$url' }) as { file?: string };
+      fileFromUrl = searchFromScrape?.file ? decodeURIComponent(searchFromScrape.file) : undefined;
+    } catch {
+      // If that fails, we're likely in a different route context
+      fileFromUrl = undefined;
+    }
+  }
 
   const isExpanded = expandedPaths.has(node.path);
   const isSelected = selectedFilePath === node.path || fileFromUrl === node.path;
@@ -219,16 +232,38 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
 
 export function FileTree() {
   const navigate = useNavigate();
-  const params = useParams({ from: '/(dashboard)/$url' });
+  const router = useRouter();
   const { scrapedData, searchQuery, setSearchQuery } = useScrapedDataStore();
   const [isSearching, setIsSearching] = useState(false);
 
+  // Check if we're in a scrape route
+  const isInScrapeRoute = router.state.location.pathname.startsWith('/scrape/');
+
+  // Try to get params from scrape route if we're in that context
+  let urlParam: string | undefined;
+  if (isInScrapeRoute) {
+    try {
+      const scrapeParams = useParams({ from: '/scrape/$url' });
+      urlParam = scrapeParams.url;
+    } catch {
+      // Not in scrape route, that's fine
+      urlParam = undefined;
+    }
+  }
+
   const handleFileSelect = (path: string) => {
-    navigate({
-      to: '/$url',
-      params: { url: params.url },
-      search: { file: path },
-    });
+    // If we have a URL param, navigate to the scrape route
+    if (urlParam && isInScrapeRoute) {
+      navigate({
+        to: '/scrape/$url',
+        params: { url: urlParam },
+        search: { file: path },
+      });
+    } else {
+      // Otherwise, just update the selected file in the store
+      const { setSelectedFilePath } = useScrapedDataStore.getState();
+      setSelectedFilePath(path);
+    }
   };
 
   const filteredNodes = useMemo(() => {
