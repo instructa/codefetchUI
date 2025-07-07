@@ -20,7 +20,12 @@
     "ex0": "tsx cli/index.ts",
     "rules:setup": "./scripts/setup-ai-rules.sh",
     "rules:sync": "./scripts/setup-ai-rules.sh",
-    "rules:list": "vibe-rules list"
+    "rules:list": "vibe-rules list",
+    "deploy": "bun ./alchemy.run.ts",
+    "deploy:dev": "bun --watch ./alchemy.run.ts --dev",
+    "deploy:prod": "bun ./alchemy.run.ts --stage prod",
+    "deploy:destroy": "bun ./alchemy.run.ts --destroy",
+    "deploy:read": "bun ./alchemy.run.ts --read"
   },
   "dependencies": {
     "@better-fetch/fetch": "^1.1.18",
@@ -87,6 +92,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@cloudflare/workerd-darwin-arm64": "^1.20250705.0",
     "@napi-rs/cli": "^2.18.4",
     "@tailwindcss/postcss": "^4.1.8",
     "@tailwindcss/vite": "^4.1.8",
@@ -99,6 +105,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.1",
+    "alchemy": "^0.44.1",
     "autoprefixer": "^10.4.21",
     "better-sqlite3": "^11.10.0",
     "class-variance-authority": "^0.7.1",
