@@ -20,8 +20,8 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
 } from '~/components/ui/sidebar';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
@@ -77,65 +77,136 @@ const getFileIcon = (fileName: string) => {
 interface FileTreeNodeProps {
   node: FileNode;
   level: number;
-  onSelect: (node: FileNode) => void;
-  selectedPath?: string | null;
-  expandedPaths: Set<string>;
-  toggleExpanded: (path: string) => void;
+  onSelect: (path: string) => void;
 }
 
-function FileTreeNode({
-  node,
-  level,
-  onSelect,
-  selectedPath,
-  expandedPaths,
-  toggleExpanded,
-}: FileTreeNodeProps) {
+function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
+  const { expandedPaths, toggleExpandedPath, selectedFilePath } = useScrapedDataStore();
+  const router = useRouter();
+
+  // Check if we're in a scrape route
+  const isInScrapeRoute = router.state.location.pathname.startsWith('/scrape/');
+
+  // Try to get search params from different route contexts
+  let fileFromUrl: string | undefined;
+  if (isInScrapeRoute) {
+    try {
+      // Try scrape route
+      const searchFromScrape = useSearch({ from: '/scrape/$url' }) as { file?: string };
+      fileFromUrl = searchFromScrape?.file ? decodeURIComponent(searchFromScrape.file) : undefined;
+    } catch {
+      // If that fails, we're likely in a different route context
+      fileFromUrl = undefined;
+    }
+  }
+
   const isExpanded = expandedPaths.has(node.path);
-  const isSelected = selectedPath === node.path;
+  const isSelected = selectedFilePath === node.path || fileFromUrl === node.path;
   const hasChildren = node.children && node.children.length > 0;
 
   const handleToggle = () => {
     if (node.type === 'directory') {
-      toggleExpanded(node.path);
+      toggleExpandedPath(node.path);
     } else {
-      onSelect(node);
+      onSelect(node.path);
     }
   };
 
-  if (node.type === 'directory') {
-    if (!hasChildren) return null; // Don't render empty directories
-
+  if (level === 0) {
+    // Root level
     return (
-      <Collapsible open={isExpanded} onOpenChange={() => toggleExpanded(node.path)}>
+      <>
+        {hasChildren &&
+          node.children?.map((child) => (
+            <FileTreeNode key={child.path} node={child} level={level + 1} onSelect={onSelect} />
+          ))}
+      </>
+    );
+  }
+
+  if (level === 1) {
+    // Top level items
+    if (node.type === 'directory' && hasChildren) {
+      return (
+        <Collapsible open={isExpanded}>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+              <SidebarMenuButton
+                onClick={handleToggle}
+                className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
+              >
+                {isExpanded ? (
+                  <ChevronDown className={cn('h-4 w-4')} />
+                ) : (
+                  <ChevronRight className={cn('h-4 w-4')} />
+                )}
+                {isExpanded ? (
+                  <FolderOpen className={cn('h-4 w-4')} />
+                ) : (
+                  <Folder className={cn('h-4 w-4')} />
+                )}
+                <span className="truncate">{node.name}</span>
+              </SidebarMenuButton>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarMenu className="ml-4">
+                {node.children?.map((child) => (
+                  <FileTreeNode
+                    key={child.path}
+                    node={child}
+                    level={level + 1}
+                    onSelect={onSelect}
+                  />
+                ))}
+              </SidebarMenu>
+            </CollapsibleContent>
+          </SidebarMenuItem>
+        </Collapsible>
+      );
+    }
+
+    // Top level file
+    const FileIcon = getFileIcon(node.name);
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={handleToggle}
+          className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
+        >
+          <FileIcon className={cn('h-4 w-4')} />
+          <span className="truncate">{node.name}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
+
+  // Nested items (level > 1)
+  if (node.type === 'directory' && hasChildren) {
+    return (
+      <Collapsible open={isExpanded}>
         <SidebarMenuItem>
           <CollapsibleTrigger asChild>
             <SidebarMenuButton
               onClick={handleToggle}
-              style={{ paddingLeft: `${level * 1}rem` }}
               className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className={cn('h-4 w-4')} />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className={cn('h-4 w-4')} />
               )}
-              {isExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
+              {isExpanded ? (
+                <FolderOpen className={cn('h-4 w-4')} />
+              ) : (
+                <Folder className={cn('h-4 w-4')} />
+              )}
               <span className="truncate">{node.name}</span>
             </SidebarMenuButton>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <SidebarMenu>
+            <SidebarMenu className="ml-4">
               {node.children?.map((child) => (
-                <FileTreeNode
-                  key={child.path}
-                  node={child}
-                  level={level + 1}
-                  onSelect={onSelect}
-                  selectedPath={selectedPath}
-                  expandedPaths={expandedPaths}
-                  toggleExpanded={toggleExpanded}
-                />
+                <FileTreeNode key={child.path} node={child} level={level + 1} onSelect={onSelect} />
               ))}
             </SidebarMenu>
           </CollapsibleContent>
@@ -144,71 +215,121 @@ function FileTreeNode({
     );
   }
 
-  // File
+  // Nested file
   const FileIcon = getFileIcon(node.name);
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={handleToggle}
-        style={{ paddingLeft: `${level * 1}rem` }}
         className={cn('w-full', isSelected && 'bg-accent text-sidebar-accent-foreground')}
       >
-        <FileIcon className="h-4 w-4 mr-2" />
+        <FileIcon className={cn('h-4 w-4')} />
         <span className="truncate">{node.name}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
 }
 
-interface FileTreeProps {
-  data: FileNode | undefined;
-  onFileSelect: (file: { id: string; name: string; path: string }) => void;
-}
+export function FileTree() {
+  const navigate = useNavigate();
+  const router = useRouter();
+  const { scrapedData, searchQuery, setSearchQuery } = useScrapedDataStore();
+  const [isSearching, setIsSearching] = useState(false);
 
-export function FileTree({ data, onFileSelect }: FileTreeProps) {
-  const { selectedFilePath, setSelectedFilePath } = useScrapedDataStore();
-  const [expandedPaths, setExpandedPaths] = useState(new Set<string>());
+  // Check if we're in a scrape route
+  const isInScrapeRoute = router.state.location.pathname.startsWith('/scrape/');
 
-  const toggleExpanded = (path: string) => {
-    setExpandedPaths((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(path)) {
-        newSet.delete(path);
-      } else {
-        newSet.add(path);
-      }
-      return newSet;
-    });
-  };
+  // Try to get params from scrape route if we're in that context
+  let urlParam: string | undefined;
+  if (isInScrapeRoute) {
+    try {
+      const scrapeParams = useParams({ from: '/scrape/$url' });
+      urlParam = scrapeParams.url;
+    } catch {
+      // Not in scrape route, that's fine
+      urlParam = undefined;
+    }
+  }
 
-  const handleSelect = (node: FileNode) => {
-    if (node.type === 'file') {
-      setSelectedFilePath(node.path);
-      onFileSelect({
-        id: node.path,
-        name: node.name,
-        path: node.path,
+  const handleFileSelect = (path: string) => {
+    // If we have a URL param, navigate to the scrape route
+    if (urlParam && isInScrapeRoute) {
+      navigate({
+        to: '/scrape/$url',
+        params: { url: urlParam },
+        search: { file: path },
       });
+    } else {
+      // Otherwise, just update the selected file in the store
+      const { setSelectedFilePath } = useScrapedDataStore.getState();
+      setSelectedFilePath(path);
     }
   };
 
-  if (!data) {
-    return <div className="p-4 text-sm text-muted-foreground">Initializing file explorer...</div>;
-  }
+  const filteredNodes = useMemo(() => {
+    if (!scrapedData || !searchQuery) return scrapedData?.root;
+
+    const results = searchFiles(scrapedData.root, searchQuery);
+    if (results.length === 0) return null;
+
+    // Create a filtered tree structure
+    const filteredRoot: FileNode = {
+      ...scrapedData.root,
+      children: results,
+    };
+
+    return filteredRoot;
+  }, [scrapedData, searchQuery]);
+
+  if (!scrapedData) return null;
 
   return (
-    <SidebarMenu>
-      {data.children?.map((node) => (
-        <FileTreeNode
-          key={node.path}
-          node={node}
-          level={1}
-          onSelect={handleSelect}
-          selectedPath={selectedFilePath}
-          expandedPaths={expandedPaths}
-          toggleExpanded={toggleExpanded}
-        />
-      ))}
-    </SidebarMenu>
+    <SidebarGroup>
+      <SidebarGroupLabel className="flex items-center justify-between">
+        <span>File Explorer</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => setIsSearching(!isSearching)}
+        >
+          <Search className="h-3 w-3" />
+        </Button>
+      </SidebarGroupLabel>
+
+      {isSearching && (
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-7 text-xs pr-8"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-7 w-7"
+                onClick={() => setSearchQuery('')}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {filteredNodes ? (
+            <FileTreeNode node={filteredNodes} level={0} onSelect={handleFileSelect} />
+          ) : (
+            <div className="px-3 py-2 text-xs text-muted-foreground">No files found</div>
+          )}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 }

@@ -1,6 +1,6 @@
 import AssistantChat from '~/components/chat/assistant-chat';
-import { FileTree } from '~/components/file-tree';
-import { useState, useRef, useEffect } from 'react';
+import { SimpleFileTree } from '~/components/simple-file-tree';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { cn } from '~/lib/utils';
@@ -103,6 +103,8 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
     useScrapedDataStore();
   const hasSetInitialFilePath = useRef(false);
+  const hasStartedScraping = useRef(false);
+  const currentUrlRef = useRef(url);
 
   const { startScraping, cancel, isLoading, error, progress, metadata } = useStreamingScrape(url, {
     onComplete: (data, meta) => {
@@ -119,10 +121,32 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     },
   });
 
+  // Start scraping only once per URL
   useEffect(() => {
-    startScraping();
-    return () => cancel();
-  }, [url, startScraping, cancel]);
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Check if URL has changed
+    if (currentUrlRef.current !== url) {
+      currentUrlRef.current = url;
+      hasStartedScraping.current = false;
+      hasSetInitialFilePath.current = false;
+    }
+
+    if (!hasStartedScraping.current) {
+      hasStartedScraping.current = true;
+      startScraping();
+    }
+
+    // Cleanup when component unmounts
+    return () => {
+      if (typeof window !== 'undefined') {
+        cancel();
+      }
+    };
+  }, [url]); // Only depend on URL - use refs to control execution
 
   useEffect(() => {
     if (initialFilePath && scrapedData && !hasSetInitialFilePath.current) {
@@ -378,7 +402,53 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 <div className="h-full flex">
                   {/* File Tree */}
                   <div className="w-64 border-r h-full overflow-y-auto">
-                    <FileTree data={scrapedData?.root} onFileSelect={handleFileOpen} />
+                    {isLoading ? (
+                      <div className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm">Scraping content...</span>
+                          </div>
+                          <Progress value={progress * 100} className="h-1.5" />
+                          <p className="text-xs text-muted-foreground">
+                            {Math.round(progress * 100)}% complete
+                          </p>
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-4/5" />
+                            <Skeleton className="h-4 w-3/5" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : error ? (
+                      <div className="p-4">
+                        <div className="flex flex-col items-center text-center">
+                          <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+                          <p className="text-sm font-medium">Scraping Failed</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {error.message || 'Failed to scrape the URL'}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-3"
+                            onClick={() => {
+                              hasStartedScraping.current = false;
+                              startScraping();
+                            }}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Retry
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <SimpleFileTree
+                        data={scrapedData?.root}
+                        onFileSelect={handleFileOpen}
+                        selectedPath={activeFileId}
+                      />
+                    )}
                   </div>
                   {/* Code Editor Area */}
                   <div className="flex-1 h-full overflow-y-auto">
@@ -431,7 +501,10 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                                 </p>
                               </div>
                               <Button
-                                onClick={() => startScraping()}
+                                onClick={() => {
+                                  hasStartedScraping.current = false;
+                                  startScraping();
+                                }}
                                 variant="outline"
                                 disabled={isLoading}
                               >
@@ -453,7 +526,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                       </div>
                     )}
 
-                    {!isLoading && !error && (
+                    {!isLoading && !error && scrapedData && (
                       <>
                         {activeFileId ? (
                           (() => {
