@@ -12,20 +12,23 @@ class RateLimiter {
   constructor(maxRequests: number = 10, windowMs: number = 60000) {
     this.maxRequests = maxRequests;
     this.windowMs = windowMs;
-
-    // Clean up old entries every minute
-    setInterval(() => {
-      const now = Date.now();
-      for (const [key, entry] of this.limits.entries()) {
-        if (entry.resetTime < now) {
-          this.limits.delete(key);
-        }
-      }
-    }, 60000);
+    
+    // Note: Removed setInterval for Cloudflare Workers compatibility
+    // Old entries are cleaned up on-demand in isAllowed() instead
   }
 
   isAllowed(identifier: string): boolean {
     const now = Date.now();
+    
+    // Clean up a few old entries on each request (for memory management)
+    let cleaned = 0;
+    for (const [key, entry] of this.limits.entries()) {
+      if (entry.resetTime < now && cleaned < 5) {
+        this.limits.delete(key);
+        cleaned++;
+      }
+    }
+    
     const entry = this.limits.get(identifier);
 
     if (!entry || entry.resetTime < now) {
