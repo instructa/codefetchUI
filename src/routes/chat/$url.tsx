@@ -1,17 +1,97 @@
-;
 import AssistantChat from '~/components/chat/assistant-chat';
 import { FileTree } from '~/components/file-tree';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { cn } from '~/lib/utils';
-import { FileCode, Eye, X, Plus, ChevronDown } from 'lucide-react';
+import { FileCode, Eye, X, Plus, AlertCircle, RefreshCw, Loader2, FolderOpen } from 'lucide-react';
+import { isUrl } from '~/utils/is-url';
+import { Skeleton } from '~/components/ui/skeleton';
+import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
+import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { Progress } from '~/components/ui/progress';
+import { Badge } from '~/components/ui/badge';
 
 export const Route = createFileRoute({
   component: ChatRoute,
+  validateSearch: (search: Record<string, unknown>): { file?: string } => {
+    return {
+      file: typeof search.file === 'string' ? search.file : undefined,
+    };
+  },
+  loader: async ({ params }) => {
+    const decodedUrl = decodeURIComponent(params.url);
+    if (!isUrl(decodedUrl)) {
+      return { isValidUrl: false, url: decodedUrl };
+    }
+    return { isValidUrl: true, url: decodedUrl };
+  },
+  pendingComponent: LoadingComponent,
+  errorComponent: ErrorComponent,
+  onLeave: () => {
+    useScrapedDataStore.getState().clearData();
+  },
 });
 
+function LoadingComponent() {
+  return (
+    <div className="p-6">
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ErrorComponent({ error }: { error: Error }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
+      <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+      <h2 className="text-2xl font-semibold mb-2">Error Loading Page</h2>
+      <p className="text-muted-foreground mb-6 max-w-md">
+        {error.message || 'An unexpected error occurred while loading this page.'}
+      </p>
+      <Button variant="outline" onClick={() => window.location.reload()}>
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Try Again
+      </Button>
+    </div>
+  );
+}
+
 function ChatRoute() {
+  const { isValidUrl, url } = Route.useLoaderData();
+  const { file: filePath } = Route.useSearch();
+
+  if (!isValidUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Invalid URL</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          The provided URL is not valid. Please check the URL and try again.
+        </p>
+        <code className="bg-destructive/10 text-destructive px-3 py-2 rounded-md text-sm">
+          {url}
+        </code>
+      </div>
+    );
+  }
+
+  return <ChatLayout url={url} initialFilePath={filePath} />;
+}
+
+function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'design'>('chat');
@@ -20,7 +100,43 @@ function ChatRoute() {
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = () => {
+  const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
+    useScrapedDataStore();
+  const hasSetInitialFilePath = useRef(false);
+
+  const { startScraping, cancel, isLoading, error, progress, metadata } = useStreamingScrape(url, {
+    onComplete: (data, meta) => {
+      setScrapedData(data, meta);
+      if (initialFilePath && !hasSetInitialFilePath.current) {
+        setTimeout(() => {
+          setSelectedFilePath(initialFilePath);
+          hasSetInitialFilePath.current = true;
+        }, 0);
+      }
+    },
+    onError: (err) => {
+      console.error('[ChatLayout] Scraping error:', err);
+    },
+  });
+
+  useEffect(() => {
+    startScraping();
+    return () => cancel();
+  }, [url, startScraping, cancel]);
+
+  useEffect(() => {
+    if (initialFilePath && scrapedData && !hasSetInitialFilePath.current) {
+      setSelectedFilePath(initialFilePath);
+      const file = getFileByPath(initialFilePath);
+      if (file) {
+        handleFileOpen({ id: file.path, name: file.name, path: file.path });
+      }
+      hasSetInitialFilePath.current = true;
+    }
+  }, [initialFilePath, scrapedData, setSelectedFilePath, getFileByPath]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsResizing(true);
   };
 
@@ -54,14 +170,14 @@ function ChatRoute() {
 
   // Mock function to handle file selection from FileTree
   const handleFileOpen = (file: { id: string; name: string; path: string }) => {
-    if (!openFiles.find(f => f.id === file.id)) {
+    if (!openFiles.find((f) => f.id === file.id)) {
       setOpenFiles([...openFiles, file]);
     }
     setActiveFileId(file.id);
   };
 
   const handleFileClose = (fileId: string) => {
-    const newFiles = openFiles.filter(f => f.id !== fileId);
+    const newFiles = openFiles.filter((f) => f.id !== fileId);
     setOpenFiles(newFiles);
     if (activeFileId === fileId && newFiles.length > 0) {
       setActiveFileId(newFiles[newFiles.length - 1].id);
@@ -106,7 +222,7 @@ function ChatRoute() {
             <div className="relative flex w-fit min-w-0 flex-1 items-center gap-2 overflow-x-auto">
               <button
                 className={cn(
-                  "group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all",
+                  'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
                   activeLeftTab === 'chat'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'hover:bg-muted/50 bg-transparent text-muted-foreground'
@@ -118,7 +234,7 @@ function ChatRoute() {
               </button>
               <button
                 className={cn(
-                  "group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all",
+                  'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
                   activeLeftTab === 'design'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'hover:bg-muted/50 bg-transparent text-muted-foreground'
@@ -171,14 +287,14 @@ function ChatRoute() {
         <div className="absolute inset-0 h-full w-3 translate-x-[-50%] outline-0 ring-0"></div>
         <div
           className={cn(
-            "absolute inset-0 h-full w-0 translate-x-[-50%] outline-0 ring-0 transition-all duration-200",
+            'absolute inset-0 h-full w-0 translate-x-[-50%] outline-0 ring-0 transition-all duration-200',
             isResizing ? 'w-[3px] bg-primary/50' : 'group-hover:w-[3px] group-hover:bg-border',
-            "group-data-[resize-handle-active=keyboard]:w-[3px]",
-            "group-data-[resize-handle-state=drag]:w-[3px]",
-            "group-data-[resize-handle-state=hover]:w-[3px]",
-            "group-data-[resize-handle-active=keyboard]:bg-primary/50",
-            "group-data-[resize-handle-state=drag]:bg-primary/50",
-            "group-data-[resize-handle-state=hover]:bg-border"
+            'group-data-[resize-handle-active=keyboard]:w-[3px]',
+            'group-data-[resize-handle-state=drag]:w-[3px]',
+            'group-data-[resize-handle-state=hover]:w-[3px]',
+            'group-data-[resize-handle-active=keyboard]:bg-primary/50',
+            'group-data-[resize-handle-state=drag]:bg-primary/50',
+            'group-data-[resize-handle-state=hover]:bg-border'
           )}
         />
       </div>
@@ -202,15 +318,15 @@ function ChatRoute() {
             <Tabs value={activeRightTab} onValueChange={setActiveRightTab} className="w-full">
               <div className="flex items-center justify-between w-full">
                 <TabsList className="h-7 bg-transparent p-0 gap-2">
-                  <TabsTrigger 
-                    value="code" 
+                  <TabsTrigger
+                    value="code"
                     className="h-7 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <FileCode className="w-3.5 h-3.5 mr-1.5" />
                     Code
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="preview" 
+                  <TabsTrigger
+                    value="preview"
                     className="h-7 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <Eye className="w-3.5 h-3.5 mr-1.5" />
@@ -232,9 +348,9 @@ function ChatRoute() {
                   <div
                     key={file.id}
                     className={cn(
-                      "group flex items-center gap-2 px-3 py-1.5 mr-1 rounded-t cursor-pointer transition-all",
-                      "hover:bg-muted/50",
-                      activeFileId === file.id && "bg-background border-b-background"
+                      'group flex items-center gap-2 px-3 py-1.5 mr-1 rounded-t cursor-pointer transition-all',
+                      'hover:bg-muted/50',
+                      activeFileId === file.id && 'bg-background border-b-background'
                     )}
                     onClick={() => setActiveFileId(file.id)}
                   >
@@ -262,26 +378,134 @@ function ChatRoute() {
                 <div className="h-full flex">
                   {/* File Tree */}
                   <div className="w-64 border-r h-full overflow-y-auto">
-                    <FileTree />
+                    <FileTree data={scrapedData?.root} onFileSelect={handleFileOpen} />
                   </div>
                   {/* Code Editor Area */}
-                  <div className="flex-1 h-full overflow-hidden">
-                    {activeFileId ? (
-                      <div className="h-full p-4">
-                        <div className="h-full bg-muted/20 rounded-lg flex items-center justify-center text-muted-foreground">
-                          <div className="text-center">
-                            <FileCode className="w-12 h-12 mx-auto mb-3" />
-                            <p className="text-sm">Code editor placeholder</p>
-                            <p className="text-xs mt-1">Selected file will be displayed here</p>
+                  <div className="flex-1 h-full overflow-y-auto">
+                    {isLoading && (
+                      <div className="p-6 h-full">
+                        <Card className="h-full">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              Scraping Content
+                            </CardTitle>
+                            <CardDescription>
+                              {metadata
+                                ? `Fetching from ${metadata.title || url}`
+                                : `Fetching from ${url}`}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <Progress value={progress * 100} className="h-2" />
+                              <p className="text-sm text-muted-foreground">
+                                Loading file tree... {Math.round(progress * 100)}%
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+
+                    {error && (
+                      <div className="p-6 h-full">
+                        <Card className="border-destructive h-full">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-destructive">
+                              <AlertCircle className="h-5 w-5" />
+                              Scraping Failed
+                            </CardTitle>
+                            <CardDescription>
+                              {error instanceof Error ? error.message : 'Failed to scrape the URL'}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">
+                                  URL
+                                </label>
+                                <p className="mt-1 p-3 bg-muted rounded-md font-mono text-sm break-all">
+                                  {url}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => startScraping()}
+                                variant="outline"
+                                disabled={isLoading}
+                              >
+                                {isLoading ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Retrying...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Try Again
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+
+                    {!isLoading && !error && (
+                      <>
+                        {activeFileId ? (
+                          (() => {
+                            const file = getFileByPath(activeFileId);
+                            if (!file) return null;
+
+                            return (
+                              <Card className="h-full flex flex-col m-2 shadow-none border-0">
+                                <CardHeader className="flex-row items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <FileCode className="h-5 w-5 text-primary" />
+                                    <div>
+                                      <CardTitle className="text-lg">{file.name}</CardTitle>
+                                      <CardDescription>{file.path}</CardDescription>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {file.language && (
+                                      <Badge variant="secondary">{file.language}</Badge>
+                                    )}
+                                    {file.size && (
+                                      <Badge variant="outline">
+                                        {(file.size / 1024).toFixed(1)} KB
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="flex-1 overflow-auto pt-0">
+                                  {file.content ? (
+                                    <pre className="p-4 bg-muted/50 rounded-md overflow-auto h-full text-sm">
+                                      <code>{file.content}</code>
+                                    </pre>
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                                      No content available for this file.
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })()
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-muted-foreground">
+                            <div className="text-center">
+                              <FolderOpen className="w-12 h-12 mx-auto mb-3" />
+                              <p className="text-sm">
+                                {scrapedData ? 'Select a file to start editing' : 'No data scraped'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-muted-foreground">
-                        <div className="text-center">
-                          <p className="text-sm">Select a file to start editing</p>
-                        </div>
-                      </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
