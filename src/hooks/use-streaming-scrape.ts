@@ -16,12 +16,11 @@ export function useStreamingScrape(url: string | null, options: UseStreamingScra
   const [error, setError] = useState<Error | null>(null);
   const [progress, setProgress] = useState(0);
   const [metadata, setMetadata] = useState<ScrapedDataMetadata | null>(null);
-  
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const nodesRef = useRef<Map<string, FileNode>>(new Map());
   const rootRef = useRef<FileNode | null>(null);
   const metadataRef = useRef<ScrapedDataMetadata | null>(null);
-
 
   const startScraping = useCallback(async () => {
     if (!url) {
@@ -47,7 +46,6 @@ export function useStreamingScrape(url: string | null, options: UseStreamingScra
         signal: abortControllerRef.current.signal,
       });
 
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -65,16 +63,15 @@ export function useStreamingScrape(url: string | null, options: UseStreamingScra
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          
           // Process any remaining data in buffer
           if (buffer.trim()) {
             try {
               const chunk: StreamChunk = JSON.parse(buffer);
-              
+
               if (chunk.type === 'complete') {
                 setProgress(1);
                 setIsLoading(false);
-                
+
                 if (rootRef.current && metadataRef.current) {
                   const scrapedData: ScrapedData = { root: rootRef.current };
                   options.onComplete?.(scrapedData, metadataRef.current);
@@ -143,7 +140,7 @@ export function useStreamingScrape(url: string | null, options: UseStreamingScra
               case 'complete':
                 setProgress(1);
                 setIsLoading(false);
-                
+
                 if (rootRef.current && metadataRef.current) {
                   const scrapedData: ScrapedData = { root: rootRef.current };
                   options.onComplete?.(scrapedData, metadataRef.current);
@@ -178,12 +175,8 @@ export function useStreamingScrape(url: string | null, options: UseStreamingScra
     }
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      cancel();
-    };
-  }, [cancel]);
+  // Cleanup on unmount - removed to prevent StrictMode issues
+  // The abort controller will be cleaned up when a new request starts
 
   return {
     startScraping,

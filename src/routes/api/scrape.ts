@@ -6,7 +6,7 @@ import { getApiSecurityConfig } from '~/lib/api-security';
 export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request, context }) => {
     const securityConfig = getApiSecurityConfig();
-    
+
     // Get rate limiter context (KV namespace in production)
     const rateLimiterContext: RateLimiterContext = {
       RATE_LIMIT_KV: (context as any)?.cloudflare?.env?.CACHE,
@@ -66,7 +66,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
     try {
       // In Cloudflare Workers, always disable filesystem cache
       const isWorkerEnvironment = (context as any)?.cloudflare?.env;
-      
+
       const codefetch = await codefetchFetch({
         source: targetUrl,
         format: 'json',
@@ -134,7 +134,10 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       });
 
       // Return streaming response with rate limit headers
-      const remaining = await universalRateLimiter.getRemainingRequests(clientIp, rateLimiterContext);
+      const remaining = await universalRateLimiter.getRemainingRequests(
+        clientIp,
+        rateLimiterContext
+      );
       const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
 
       return new Response(stream, {

@@ -107,20 +107,26 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const hasStartedScraping = useRef(false);
   const currentUrlRef = useRef(url);
 
-  const { startScraping, cancel, isLoading, error, progress, metadata } = useStreamingScrape(url, {
-    onComplete: (data, meta) => {
-      setScrapedData(data, meta);
-      if (initialFilePath && !hasSetInitialFilePath.current) {
-        setTimeout(() => {
-          setSelectedFilePath(initialFilePath);
-          hasSetInitialFilePath.current = true;
-        }, 0);
-      }
-    },
-    onError: (err) => {
-      console.error('[ChatLayout] Scraping error:', err);
-    },
-  });
+  // Only run the hook on client side
+  const isBrowser = typeof window !== 'undefined';
+  
+  const { startScraping, cancel, isLoading, error, progress, metadata } = useStreamingScrape(
+    isBrowser ? url : null, // Pass null on server side
+    {
+      onComplete: (data, meta) => {
+        setScrapedData(data, meta);
+        if (initialFilePath && !hasSetInitialFilePath.current) {
+          setTimeout(() => {
+            setSelectedFilePath(initialFilePath);
+            hasSetInitialFilePath.current = true;
+          }, 0);
+        }
+      },
+      onError: (err) => {
+        console.error('[ChatLayout] Scraping error:', err);
+      },
+    }
+  );
 
   // Start scraping only once per URL
   useEffect(() => {
@@ -136,18 +142,14 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       hasSetInitialFilePath.current = false;
     }
 
-    if (!hasStartedScraping.current) {
+    if (!hasStartedScraping.current && url) {
       hasStartedScraping.current = true;
       startScraping();
     }
 
-    // Cleanup when component unmounts
-    return () => {
-      if (typeof window !== 'undefined') {
-        cancel();
-      }
-    };
-  }, [url]); // Only depend on URL - use refs to control execution
+    // Don't cleanup on every unmount - this causes issues with StrictMode
+    // Only cleanup when the component is truly unmounting (URL change or navigation)
+  }, [url, startScraping]); // Include startScraping in deps
 
   useEffect(() => {
     if (initialFilePath && scrapedData && !hasSetInitialFilePath.current) {
@@ -375,9 +377,14 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                       activeFileId === file.id && 'bg-background border-b-background'
                     )}
                     onClick={() => setActiveFileId(file.id)}
+                    onAuxClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleFileClose(file.id);
+                    }}
                   >
                     <FileCode className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-sm">{file.name}</span>
+                    <span className="text-sm whitespace-nowrap">{file.name}</span>
                     <button
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {

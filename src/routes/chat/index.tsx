@@ -63,7 +63,7 @@ function ChatIndex() {
       // Navigate to the chat/$url route
       navigate({
         to: '/chat/$url',
-        params: { url: processedUrl },
+        params: { url: encodeURIComponent(processedUrl) },
       });
     } else if (uploadedFile) {
       // TODO: Implement file upload processing
@@ -115,7 +115,6 @@ function ChatIndex() {
 
   const handleSyncLocal = () => {
     // Handle sync from local
-    console.log('Syncing from local');
     setError('Local sync feature is coming soon.');
   };
 
