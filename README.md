@@ -4,6 +4,8 @@
   <img src="public/constructa_banner_.png" alt="Constructa Starter Banner" width="100%" />
 </div>
 
+X
+
 <div align="center">
   <h2>AI-First SAAS Starter Kit</h2>
   <p>Optimized for coding with AI assistants • Powered by <a href="https://instructa.ai">instructa.ai</a></p>
