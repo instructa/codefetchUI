@@ -13,3 +13,4 @@ alwaysApply: true
 - Don't use default exports in route files.
 - If a file might ever ship to the browser, read env vars with import.meta.env; only reach for process.env in code that’s guaranteed to run exclusively on the server.
 - Never update .env file, update the .env.example instead
+- Never add `import { createFileRoute } from '@tanstack/react-router'` createFileRoute is auto found.

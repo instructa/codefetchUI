@@ -1,3 +1,4 @@
+;
 import { isUrl } from '~/utils/is-url';
 import { AlertCircle, Globe, RefreshCw, Loader2, FileCode, FolderOpen } from 'lucide-react';
 import { Button } from '~/components/ui/button';
