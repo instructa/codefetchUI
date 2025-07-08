@@ -1,5 +1,6 @@
 import AssistantChat from '~/components/chat/assistant-chat';
 import { SimpleFileTree } from '~/components/simple-file-tree';
+import { CodefetchFilters } from '~/components/codefetch-filters';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
@@ -278,11 +279,8 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 <AssistantChat />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <div className="text-center">
-                  <div className="text-lg font-medium mb-2">Design view coming soon</div>
-                  <div className="text-sm">Visual design tools will appear here</div>
-                </div>
+              <div className="flex-1 overflow-hidden">
+                <CodefetchFilters />
               </div>
             )}
           </div>
@@ -446,7 +444,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                       <SimpleFileTree
                         data={scrapedData?.root}
                         onFileSelect={handleFileOpen}
-                        selectedPath={activeFileId}
+                        selectedPath={activeFileId || undefined}
                       />
                     )}
                   </div>
