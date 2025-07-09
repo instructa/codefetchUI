@@ -112,6 +112,10 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<string>('none');
+  const [manualSelections, setManualSelections] = useState<{
+    checked: Set<string>;
+    unchecked: Set<string>;
+  }>({ checked: new Set(), unchecked: new Set() });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
@@ -148,8 +152,8 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const previewMarkdown = useMemo(() => {
     if (!scrapedData?.root) return '';
 
-    // Filter the file tree based on current filters
-    const filteredRoot = filterFileTree(scrapedData.root, filters);
+    // Filter the file tree based on current filters and manual selections
+    const filteredRoot = filterFileTree(scrapedData.root, filters, manualSelections);
 
     if (!filteredRoot) {
       return '# No files match the current filters\n\nPlease adjust your filters to see content.';
@@ -209,7 +213,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       console.error('Error generating preview:', err);
       return '# Error generating preview\n\nUnable to generate markdown preview.';
     }
-  }, [scrapedData, filters, url, metadata, selectedPrompt]);
+  }, [scrapedData, filters, url, metadata, selectedPrompt, manualSelections]);
 
   // Start scraping only once per URL
   useEffect(() => {
@@ -545,6 +549,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                         data={scrapedData?.root}
                         onFileSelect={handleFileOpen}
                         selectedPath={activeFileId || undefined}
+                        onManualSelectionsChange={setManualSelections}
                       />
                     )}
                   </div>

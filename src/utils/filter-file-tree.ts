@@ -112,9 +112,18 @@ export function filterFileTree(
     excludeFiles: string[];
     includeDirs: string[];
     excludeDirs: string[];
+  },
+  manualSelections?: {
+    checked: Set<string>;
+    unchecked: Set<string>;
   }
 ): FileNode | null {
   if (node.type === 'file') {
+    // Check manual selections first
+    if (manualSelections) {
+      if (manualSelections.checked.has(node.path)) return node;
+      if (manualSelections.unchecked.has(node.path)) return null;
+    }
     // Return the file only if it matches the filters
     return fileMatchesFilters(node, filters) ? node : null;
   }
@@ -122,7 +131,7 @@ export function filterFileTree(
   // For directories, recursively filter children
   if (node.children) {
     const filteredChildren = node.children
-      .map(child => filterFileTree(child, filters))
+      .map(child => filterFileTree(child, filters, manualSelections))
       .filter((child): child is FileNode => child !== null);
 
     // Only return directory if it has matching children
