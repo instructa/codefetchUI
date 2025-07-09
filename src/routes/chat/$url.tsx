@@ -193,17 +193,11 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           }
         }
 
-        console.log(
-          'Selected prompt:',
-          selectedPrompt,
-          'Prompt text:',
-          promptText?.substring(0, 100)
-        );
-
         if (promptText) {
           // Replace template variables
           promptText = promptText.replace('{{CURRENT_CODEBASE}}', codebaseMarkdown);
           promptText = promptText.replace('{{MESSAGE}}', ''); // Empty for now
+          promptText = promptText.replace('<current_codebase>', '');
           return promptText;
         }
       }
