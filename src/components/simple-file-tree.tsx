@@ -244,6 +244,25 @@ function SimpleFileTreeNode({
     });
   }, [node.children, filters]);
 
+  // Calculate how many children are actually checked
+  const checkedChildrenCount = useMemo(() => {
+    if (!hasChildren) return 0;
+
+    const countChecked = (n: FileNode): number => {
+      if (n.type === 'file') {
+        if (manualSelections.checked.has(n.path)) return 1;
+        if (manualSelections.unchecked.has(n.path)) return 0;
+        return fileMatchesFilters(n, filters) ? 1 : 0;
+      }
+      if (n.children) {
+        return n.children.reduce((acc, child) => acc + countChecked(child), 0);
+      }
+      return 0;
+    };
+
+    return node.children!.reduce((acc, child) => acc + countChecked(child), 0);
+  }, [node.children, filters, manualSelections]);
+
   // Determine checkbox state
   const getCheckboxState = (): boolean | 'indeterminate' => {
     if (manualSelections.checked.has(node.path)) {
@@ -255,22 +274,31 @@ function SimpleFileTreeNode({
     if (node.type === 'file') {
       return matchesFilter;
     }
-    // For directories, check if all children are selected
-    if (hasChildren && childMatches.length > 0) {
-      const allChecked = childMatches.every(({ matches }, index) => {
-        const child = node.children![index];
-        if (manualSelections.unchecked.has(child.path)) return false;
-        if (manualSelections.checked.has(child.path)) return true;
-        return matches || false;
-      });
-      const someChecked = childMatches.some(({ matches }, index) => {
-        const child = node.children![index];
-        if (manualSelections.checked.has(child.path)) return true;
-        if (manualSelections.unchecked.has(child.path)) return false;
-        return matches || false;
-      });
-      if (allChecked) return true;
-      if (someChecked) return 'indeterminate';
+    // For directories, check if all/some children are selected
+    if (hasChildren) {
+      let checkedCount = 0;
+      let totalCount = 0;
+
+      const countChildrenState = (n: FileNode): { checked: number; total: number } => {
+        if (n.type === 'file') {
+          totalCount++;
+          if (manualSelections.checked.has(n.path)) {
+            checkedCount++;
+          } else if (!manualSelections.unchecked.has(n.path) && fileMatchesFilters(n, filters)) {
+            checkedCount++;
+          }
+          return { checked: checkedCount, total: totalCount };
+        }
+        if (n.children) {
+          n.children.forEach((child) => countChildrenState(child));
+        }
+        return { checked: checkedCount, total: totalCount };
+      };
+
+      node.children!.forEach((child) => countChildrenState(child));
+
+      if (checkedCount === totalCount && totalCount > 0) return true;
+      if (checkedCount > 0) return 'indeterminate';
       return false;
     }
     return false;
@@ -309,11 +337,6 @@ function SimpleFileTreeNode({
   const paddingLeft = `${(level - 1) * 16 + 8}px`;
 
   if (node.type === 'directory' && hasChildren) {
-    const totalMatches = childMatches.reduce(
-      (acc, { matches, childCount }) => acc + (matches ? 1 : 0) + childCount,
-      0
-    );
-
     return (
       <Collapsible open={isExpanded}>
         <CollapsibleTrigger asChild>
@@ -330,14 +353,22 @@ function SimpleFileTreeNode({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 shrink-0" />
             )}
+            <Checkbox
+              checked={checkboxState === true}
+              onClick={handleCheckboxChange}
+              className="size-3.5 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              aria-label={`Directory selection`}
+            />
             {isExpanded ? (
               <FolderOpen className="h-3.5 w-3.5 shrink-0" />
             ) : (
               <Folder className="h-3.5 w-3.5 shrink-0" />
             )}
             <span className="truncate">{node.name}</span>
-            {totalMatches > 0 && (
-              <span className="ml-auto mr-1 text-xs text-muted-foreground">({totalMatches})</span>
+            {checkedChildrenCount > 0 && (
+              <span className="ml-auto mr-1 text-xs text-muted-foreground">
+                ({checkedChildrenCount})
+              </span>
             )}
           </button>
         </CollapsibleTrigger>
@@ -567,25 +598,25 @@ export function SimpleFileTree({
 
         // If directory, cascade to children
         if (isDirectory && node.children) {
-          const shouldCheck =
-            newChecked.has(path) || (!newUnchecked.has(path) && !wasFilterChecked);
+          // Determine if we should check or uncheck all children
+          const shouldCheck = newChecked.has(path);
 
           const cascadeToChildren = (n: FileNode) => {
+            if (n.type === 'file') {
+              if (shouldCheck) {
+                newChecked.add(n.path);
+                newUnchecked.delete(n.path);
+              } else {
+                newUnchecked.add(n.path);
+                newChecked.delete(n.path);
+              }
+            }
             if (n.children) {
-              n.children.forEach((child) => {
-                if (shouldCheck) {
-                  newChecked.add(child.path);
-                  newUnchecked.delete(child.path);
-                } else {
-                  newUnchecked.add(child.path);
-                  newChecked.delete(child.path);
-                }
-                cascadeToChildren(child);
-              });
+              n.children.forEach((child) => cascadeToChildren(child));
             }
           };
 
-          cascadeToChildren(node);
+          node.children.forEach((child) => cascadeToChildren(child));
         }
 
         return { checked: newChecked, unchecked: newUnchecked };
