@@ -14,6 +14,8 @@ import {
   Loader2,
   FolderOpen,
   Download,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { isUrl } from '~/utils/is-url';
 import { Skeleton } from '~/components/ui/skeleton';
@@ -131,6 +133,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     checked: Set<string>;
     unchecked: Set<string>;
   }>({ checked: new Set(), unchecked: new Set() });
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
@@ -212,7 +215,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           // Replace template variables
           promptText = promptText.replace('{{CURRENT_CODEBASE}}', codebaseMarkdown);
           promptText = promptText.replace('{{MESSAGE}}', ''); // Empty for now
-          promptText = promptText.replace('<current_codebase>', '');
           return promptText;
         }
       }
@@ -340,6 +342,18 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const filename = `codebase-${timestamp}.xml`;
     downloadFile(xmlContent, filename, 'application/xml');
+  };
+
+  const handleCopyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(previewMarkdown);
+      setCopiedToClipboard(true);
+      setTimeout(() => {
+        setCopiedToClipboard(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   return (
@@ -488,6 +502,20 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                   </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={handleCopyToClipboard}
+                    disabled={!previewMarkdown}
+                  >
+                    {copiedToClipboard ? (
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    {copiedToClipboard ? 'Copied' : 'Copy'}
+                  </Button>
                   <div className="flex items-center">
                     <Button
                       variant="outline"
