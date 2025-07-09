@@ -227,7 +227,7 @@ function SimpleFileTreeNode({
         const counts = child.children.map((grandchild) =>
           grandchild.type === 'file' ? (fileMatchesFilters(grandchild, filters) ? 1 : 0) : 0
         );
-        childCount = counts.reduce((a, b) => a + b, 0);
+        childCount = counts.reduce((a: number, b: number) => a + b, 0);
       }
 
       return { matches, childCount };
@@ -323,7 +323,7 @@ function SimpleFileTreeNode({
     >
       <Checkbox
         checked={matchesFilter}
-        className="h-3 w-3 pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+        className="size-3.5 pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
         aria-label={`File ${matchesFilter ? 'matches' : 'does not match'} current filters`}
       />
       <FileIcon className="h-3.5 w-3.5 shrink-0" />

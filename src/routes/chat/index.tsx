@@ -127,7 +127,9 @@ function ChatIndex() {
             <div className="pointer-events-none inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border ring-blue-600 transition-all focus-visible:ring-2 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:ring-0 border-teal-100 dark:border-teal-900 bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-400 hover:border-teal-100 hover:bg-teal-100 focus:border-teal-100 focus:bg-teal-100 focus-visible:border-teal-100 focus-visible:bg-teal-100 h-5 px-1.5 text-[11px] font-medium">
               New
             </div>
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Analyze any GitHub repository</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Analyze any GitHub repository
+            </span>
           </div>
           <div className="flex items-center pl-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300">
             <span className="mr-0.5">Start now</span>
@@ -169,8 +171,12 @@ function ChatIndex() {
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-teal-50/90 dark:bg-teal-900/90 backdrop-blur-sm">
                 <div className="text-center">
                   <Upload className="mx-auto h-8 w-8 text-teal-600 dark:text-teal-400 mb-2 animate-bounce" />
-                  <p className="text-sm font-medium text-teal-900 dark:text-teal-100">Drop your project files here</p>
-                  <p className="text-xs text-teal-700 dark:text-teal-300 mt-1">Only .zip files are supported</p>
+                  <p className="text-sm font-medium text-teal-900 dark:text-teal-100">
+                    Drop your project files here
+                  </p>
+                  <p className="text-xs text-teal-700 dark:text-teal-300 mt-1">
+                    Only .zip files are supported
+                  </p>
                 </div>
               </div>
             )}
@@ -183,7 +189,9 @@ function ChatIndex() {
                     <div className="flex items-center gap-3">
                       <FileArchive className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{uploadedFile.name}</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {uploadedFile.name}
+                        </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
@@ -209,7 +217,7 @@ function ChatIndex() {
                         setError(null);
                       }}
                       placeholder="regenrek/codefetch"
-                      className="w-full h-11 pl-10 pr-3 bg-transparent border-0 focus:ring-0 text-base placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100"
+                      className="w-full h-11 pl-10 pr-3 bg-transparent border-0 focus:ring-0 text-base placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 focus-visible:ring-0"
                       type="text"
                       autoFocus
                     />
