@@ -550,6 +550,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                         onFileSelect={handleFileOpen}
                         selectedPath={activeFileId || undefined}
                         onManualSelectionsChange={setManualSelections}
+                        initialManualSelections={manualSelections}
                       />
                     )}
                   </div>

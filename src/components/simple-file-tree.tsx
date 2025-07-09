@@ -422,6 +422,7 @@ interface SimpleFileTreeProps {
   onFileSelect: (file: { id: string; name: string; path: string }) => void;
   selectedPath?: string;
   onManualSelectionsChange?: (selections: { checked: Set<string>; unchecked: Set<string> }) => void;
+  initialManualSelections?: { checked: Set<string>; unchecked: Set<string> };
 }
 
 // Helper function to search files
@@ -451,6 +452,7 @@ export function SimpleFileTree({
   onFileSelect,
   selectedPath,
   onManualSelectionsChange,
+  initialManualSelections,
 }: SimpleFileTreeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -458,7 +460,7 @@ export function SimpleFileTree({
   const [manualSelections, setManualSelections] = useState<{
     checked: Set<string>;
     unchecked: Set<string>;
-  }>({ checked: new Set(), unchecked: new Set() });
+  }>(initialManualSelections || { checked: new Set(), unchecked: new Set() });
   const filters = useCodefetchFilters();
   const [prevFilters, setPrevFilters] = useState(filters);
 
@@ -470,6 +472,13 @@ export function SimpleFileTree({
       setPrevFilters(filters);
     }
   }, [filters, prevFilters]);
+
+  // Update manual selections when initialManualSelections prop changes
+  useEffect(() => {
+    if (initialManualSelections) {
+      setManualSelections(initialManualSelections);
+    }
+  }, [initialManualSelections]);
 
   // Notify parent of manual selections
   useEffect(() => {
