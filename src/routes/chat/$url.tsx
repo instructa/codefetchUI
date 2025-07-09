@@ -107,7 +107,7 @@ function ChatRoute() {
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
-  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('chat');
+  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('filters');
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
@@ -330,7 +330,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           {/* Tab Header */}
           <div className="flex h-12 items-center gap-2 border-b px-3 bg-muted/30">
             <div className="relative flex w-fit min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-              <button
+              {/* <button
                 className={cn(
                   'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
                   activeLeftTab === 'chat'
@@ -341,7 +341,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 onClick={() => setActiveLeftTab('chat')}
               >
                 <div className="truncate">Chat</div>
-              </button>
+              </button> */}
               <button
                 className={cn(
                   'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
@@ -359,11 +359,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
 
           {/* Content Area */}
           <div className="relative flex h-full min-w-0 flex-1 flex-col">
-            {activeLeftTab === 'chat' ? (
+            {activeLeftTab === 'chat' && (
               <div className="flex-1 overflow-hidden">
                 <AssistantChat />
               </div>
-            ) : (
+            )}
+            {activeLeftTab === 'filters' && (
               <div className="flex-1 overflow-hidden">
                 <CodefetchFilters />
               </div>
