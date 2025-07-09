@@ -95,7 +95,7 @@ function ChatRoute() {
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
-  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'design'>('chat');
+  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('chat');
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
@@ -109,7 +109,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
 
   // Only run the hook on client side
   const isBrowser = typeof window !== 'undefined';
-  
+
   const { startScraping, cancel, isLoading, error, progress, metadata } = useStreamingScrape(
     isBrowser ? url : null, // Pass null on server side
     {
@@ -262,14 +262,14 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
               <button
                 className={cn(
                   'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
-                  activeLeftTab === 'design'
+                  activeLeftTab === 'filters'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'hover:bg-muted/50 bg-transparent text-muted-foreground'
                 )}
-                data-active-tab={activeLeftTab === 'design'}
-                onClick={() => setActiveLeftTab('design')}
+                data-active-tab={activeLeftTab === 'filters'}
+                onClick={() => setActiveLeftTab('filters')}
               >
-                <div className="truncate">Design</div>
+                <div className="truncate">Filters</div>
               </button>
             </div>
           </div>
