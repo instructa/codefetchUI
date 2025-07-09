@@ -126,8 +126,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       codefetch-sdk:
-        specifier: 1.5.6-alpha.0
-        version: 1.5.6-alpha.0(magicast@0.3.5)
+        specifier: 1.5.7-alpha.0
+        version: 1.5.7-alpha.0(magicast@0.3.5)
       drizzle-kit:
         specifier: ^0.31.1
         version: 0.31.1
@@ -4750,8 +4750,8 @@ packages:
   code-block-writer@12.0.0:
     resolution: {integrity: sha512-q4dMFMlXtKR3XNBHyMHt/3pwYNA69EDk00lloMOaaUMKPUXBw6lpXtbu3MMVG6/uOihGnRDOlkyqsONEUj60+w==}
 
-  codefetch-sdk@1.5.6-alpha.0:
-    resolution: {integrity: sha512-HzB8Gg/xQPhfwT1YhI4E5inLl0QoOJ3H4kOkrMv3AW+I7buIG5NjcVsRBMcTs/Y4HM5vBZSJA7yg5asDx75fKw==}
+  codefetch-sdk@1.5.7-alpha.0:
+    resolution: {integrity: sha512-7QZrK8sMTZNCJVlRupe/NmZC2Z1PCeVy4cs1GT/fAlfxwFFtL+WMnyXHuZsZMIABoqiGXClLIjNnzDBYTclvMw==}
 
   cohere-ai@7.17.1:
     resolution: {integrity: sha512-GI/uWVYYGIN3gdjJRlbjEaLJNJVXsUJyOlPqwBWgAmK18kP4CJoErxKwU0aLe3tHHOBcC2RqXe6PmGO0dz7dpQ==}
@@ -15088,7 +15088,7 @@ snapshots:
 
   code-block-writer@12.0.0: {}
 
-  codefetch-sdk@1.5.6-alpha.0(magicast@0.3.5):
+  codefetch-sdk@1.5.7-alpha.0(magicast@0.3.5):
     dependencies:
       adm-zip: 0.5.16
       c12: 2.0.4(magicast@0.3.5)

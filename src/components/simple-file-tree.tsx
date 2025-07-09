@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   ChevronRight,
   ChevronDown,
@@ -11,6 +11,9 @@ import {
   FileImage,
   Search,
   X,
+  CheckSquare,
+  Square,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '~/lib/utils';
 import { Input } from '~/components/ui/input';
@@ -190,6 +193,11 @@ interface SimpleFileTreeNodeProps {
   toggleExpandedPath: (path: string) => void;
   matchesFilter?: boolean;
   childrenMatchCount?: number;
+  manualSelections: {
+    checked: Set<string>;
+    unchecked: Set<string>;
+  };
+  onManualSelectionChange: (path: string, isDirectory: boolean) => void;
 }
 
 function SimpleFileTreeNode({
@@ -201,6 +209,8 @@ function SimpleFileTreeNode({
   toggleExpandedPath,
   matchesFilter = false,
   childrenMatchCount = 0,
+  manualSelections,
+  onManualSelectionChange,
 }: SimpleFileTreeNodeProps) {
   const isExpanded = expandedPaths.has(node.path);
   const isSelected = selectedPath === node.path;
@@ -234,6 +244,73 @@ function SimpleFileTreeNode({
     });
   }, [node.children, filters]);
 
+  // Calculate how many children are actually checked
+  const checkedChildrenCount = useMemo(() => {
+    if (!hasChildren) return 0;
+
+    const countChecked = (n: FileNode): number => {
+      if (n.type === 'file') {
+        if (manualSelections.checked.has(n.path)) return 1;
+        if (manualSelections.unchecked.has(n.path)) return 0;
+        return fileMatchesFilters(n, filters) ? 1 : 0;
+      }
+      if (n.children) {
+        return n.children.reduce((acc, child) => acc + countChecked(child), 0);
+      }
+      return 0;
+    };
+
+    return node.children!.reduce((acc, child) => acc + countChecked(child), 0);
+  }, [node.children, filters, manualSelections]);
+
+  // Determine checkbox state
+  const getCheckboxState = (): boolean | 'indeterminate' => {
+    if (manualSelections.checked.has(node.path)) {
+      return true;
+    }
+    if (manualSelections.unchecked.has(node.path)) {
+      return false;
+    }
+    if (node.type === 'file') {
+      return matchesFilter;
+    }
+    // For directories, check if all/some children are selected
+    if (hasChildren) {
+      let checkedCount = 0;
+      let totalCount = 0;
+
+      const countChildrenState = (n: FileNode): { checked: number; total: number } => {
+        if (n.type === 'file') {
+          totalCount++;
+          if (manualSelections.checked.has(n.path)) {
+            checkedCount++;
+          } else if (!manualSelections.unchecked.has(n.path) && fileMatchesFilters(n, filters)) {
+            checkedCount++;
+          }
+          return { checked: checkedCount, total: totalCount };
+        }
+        if (n.children) {
+          n.children.forEach((child) => countChildrenState(child));
+        }
+        return { checked: checkedCount, total: totalCount };
+      };
+
+      node.children!.forEach((child) => countChildrenState(child));
+
+      if (checkedCount === totalCount && totalCount > 0) return true;
+      if (checkedCount > 0) return 'indeterminate';
+      return false;
+    }
+    return false;
+  };
+
+  const checkboxState = getCheckboxState();
+
+  const handleCheckboxChange = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onManualSelectionChange(node.path, node.type === 'directory');
+  };
+
   // Skip root level rendering, directly render children
   if (level === 0 && hasChildren) {
     return (
@@ -249,6 +326,8 @@ function SimpleFileTreeNode({
             toggleExpandedPath={toggleExpandedPath}
             matchesFilter={childMatches[index]?.matches || false}
             childrenMatchCount={childMatches[index]?.childCount || 0}
+            manualSelections={manualSelections}
+            onManualSelectionChange={onManualSelectionChange}
           />
         ))}
       </>
@@ -258,11 +337,6 @@ function SimpleFileTreeNode({
   const paddingLeft = `${(level - 1) * 16 + 8}px`;
 
   if (node.type === 'directory' && hasChildren) {
-    const totalMatches = childMatches.reduce(
-      (acc, { matches, childCount }) => acc + (matches ? 1 : 0) + childCount,
-      0
-    );
-
     return (
       <Collapsible open={isExpanded}>
         <CollapsibleTrigger asChild>
@@ -270,7 +344,8 @@ function SimpleFileTreeNode({
             onClick={handleToggle}
             className={cn(
               'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm',
-              isSelected && 'bg-accent text-accent-foreground'
+              isSelected && 'bg-accent text-accent-foreground',
+              !checkedChildrenCount && 'opacity-70'
             )}
             style={{ paddingLeft }}
           >
@@ -279,14 +354,22 @@ function SimpleFileTreeNode({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 shrink-0" />
             )}
+            <Checkbox
+              checked={checkboxState === true}
+              onClick={handleCheckboxChange}
+              className="size-3.5 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              aria-label={`Directory selection`}
+            />
             {isExpanded ? (
               <FolderOpen className="h-3.5 w-3.5 shrink-0" />
             ) : (
               <Folder className="h-3.5 w-3.5 shrink-0" />
             )}
             <span className="truncate">{node.name}</span>
-            {totalMatches > 0 && (
-              <span className="ml-auto mr-1 text-xs text-muted-foreground">({totalMatches})</span>
+            {checkedChildrenCount > 0 && (
+              <span className="ml-auto mr-1 text-xs text-muted-foreground">
+                ({checkedChildrenCount})
+              </span>
             )}
           </button>
         </CollapsibleTrigger>
@@ -302,6 +385,8 @@ function SimpleFileTreeNode({
               toggleExpandedPath={toggleExpandedPath}
               matchesFilter={childMatches[index]?.matches || false}
               childrenMatchCount={childMatches[index]?.childCount || 0}
+              manualSelections={manualSelections}
+              onManualSelectionChange={onManualSelectionChange}
             />
           ))}
         </CollapsibleContent>
@@ -317,14 +402,15 @@ function SimpleFileTreeNode({
       className={cn(
         'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm transition-opacity',
         isSelected && 'bg-accent text-accent-foreground',
-        !matchesFilter && 'opacity-60'
+        !checkboxState && 'opacity-70'
       )}
       style={{ paddingLeft }}
     >
       <Checkbox
-        checked={matchesFilter}
-        className="size-3.5 pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-        aria-label={`File ${matchesFilter ? 'matches' : 'does not match'} current filters`}
+        checked={checkboxState === true}
+        onClick={handleCheckboxChange}
+        className="size-3.5 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+        aria-label={`${node.type === 'directory' ? 'Directory' : 'File'} selection`}
       />
       <FileIcon className="h-3.5 w-3.5 shrink-0" />
       <span className="truncate">{node.name}</span>
@@ -336,6 +422,8 @@ interface SimpleFileTreeProps {
   data?: FileNode;
   onFileSelect: (file: { id: string; name: string; path: string }) => void;
   selectedPath?: string;
+  onManualSelectionsChange?: (selections: { checked: Set<string>; unchecked: Set<string> }) => void;
+  initialManualSelections?: { checked: Set<string>; unchecked: Set<string> };
 }
 
 // Helper function to search files
@@ -360,11 +448,43 @@ function searchFiles(node: FileNode, query: string): FileNode[] {
   return results;
 }
 
-export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileTreeProps) {
+export function SimpleFileTree({
+  data,
+  onFileSelect,
+  selectedPath,
+  onManualSelectionsChange,
+  initialManualSelections,
+}: SimpleFileTreeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [manualSelections, setManualSelections] = useState<{
+    checked: Set<string>;
+    unchecked: Set<string>;
+  }>(initialManualSelections || { checked: new Set(), unchecked: new Set() });
   const filters = useCodefetchFilters();
+  const [prevFilters, setPrevFilters] = useState(filters);
+
+  // Reset manual selections when filters change
+  useEffect(() => {
+    const hasFiltersChanged = JSON.stringify(filters) !== JSON.stringify(prevFilters);
+    if (hasFiltersChanged) {
+      setManualSelections({ checked: new Set(), unchecked: new Set() });
+      setPrevFilters(filters);
+    }
+  }, [filters, prevFilters]);
+
+  // Update manual selections when initialManualSelections prop changes
+  useEffect(() => {
+    if (initialManualSelections) {
+      setManualSelections(initialManualSelections);
+    }
+  }, [initialManualSelections]);
+
+  // Notify parent of manual selections
+  useEffect(() => {
+    onManualSelectionsChange?.(manualSelections);
+  }, [manualSelections, onManualSelectionsChange]);
 
   // Calculate initial matches for root level
   const rootChildMatches = useMemo(() => {
@@ -409,6 +529,25 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
     return countMatches(data);
   }, [data, filters]);
 
+  // Count selected files (including manual selections)
+  const selectedCount = useMemo(() => {
+    if (!data) return 0;
+
+    const countSelected = (node: FileNode): number => {
+      if (node.type === 'file') {
+        if (manualSelections.checked.has(node.path)) return 1;
+        if (manualSelections.unchecked.has(node.path)) return 0;
+        return fileMatchesFilters(node, filters) ? 1 : 0;
+      }
+      if (node.children) {
+        return node.children.reduce((acc, child) => acc + countSelected(child), 0);
+      }
+      return 0;
+    };
+
+    return countSelected(data);
+  }, [data, filters, manualSelections]);
+
   const toggleExpandedPath = (path: string) => {
     setExpandedPaths((prev) => {
       const newSet = new Set(prev);
@@ -432,6 +571,111 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
     }
   };
 
+  // Handle manual selection changes
+  const handleManualSelectionChange = useCallback(
+    (path: string, isDirectory: boolean) => {
+      setManualSelections((prev) => {
+        const newChecked = new Set(prev.checked);
+        const newUnchecked = new Set(prev.unchecked);
+        const node = findFileByPath(data, path);
+
+        if (!node) return prev;
+
+        // Toggle current node
+        const wasManuallyChecked = newChecked.has(path);
+        const wasManuallyUnchecked = newUnchecked.has(path);
+        const wasFilterChecked = node.type === 'file' ? fileMatchesFilters(node, filters) : false;
+
+        if (wasManuallyChecked) {
+          newChecked.delete(path);
+          if (!wasFilterChecked) {
+            newUnchecked.add(path);
+          }
+        } else if (wasManuallyUnchecked) {
+          newUnchecked.delete(path);
+          if (wasFilterChecked) {
+            // Return to filter state
+          } else {
+            newChecked.add(path);
+          }
+        } else {
+          if (wasFilterChecked) {
+            newUnchecked.add(path);
+          } else {
+            newChecked.add(path);
+          }
+        }
+
+        // If directory, cascade to children
+        if (isDirectory && node.children) {
+          // Determine if we should check or uncheck all children
+          const shouldCheck = newChecked.has(path);
+
+          const cascadeToChildren = (n: FileNode) => {
+            if (n.type === 'file') {
+              if (shouldCheck) {
+                newChecked.add(n.path);
+                newUnchecked.delete(n.path);
+              } else {
+                newUnchecked.add(n.path);
+                newChecked.delete(n.path);
+              }
+            }
+            if (n.children) {
+              n.children.forEach((child) => cascadeToChildren(child));
+            }
+          };
+
+          node.children.forEach((child) => cascadeToChildren(child));
+        }
+
+        return { checked: newChecked, unchecked: newUnchecked };
+      });
+    },
+    [data, filters]
+  );
+
+  // Select all files
+  const handleSelectAll = useCallback(() => {
+    if (!data) return;
+
+    const newChecked = new Set<string>();
+    const collectAllFiles = (node: FileNode) => {
+      if (node.type === 'file') {
+        newChecked.add(node.path);
+      }
+      if (node.children) {
+        node.children.forEach(collectAllFiles);
+      }
+    };
+
+    collectAllFiles(data);
+    setManualSelections({ checked: newChecked, unchecked: new Set() });
+  }, [data]);
+
+  // Deselect all files
+  const handleDeselectAll = useCallback(() => {
+    if (!data) return;
+
+    const newUnchecked = new Set<string>();
+    const collectAllFiles = (node: FileNode) => {
+      if (node.type === 'file') {
+        newUnchecked.add(node.path);
+      }
+      if (node.children) {
+        node.children.forEach(collectAllFiles);
+      }
+    };
+
+    collectAllFiles(data);
+    setManualSelections({ checked: new Set(), unchecked: newUnchecked });
+  }, [data]);
+
+  // Reset to filter state
+  const handleReset = useCallback(() => {
+    setManualSelections({ checked: new Set(), unchecked: new Set() });
+  }, []);
+
   const filteredNodes = useMemo(() => {
     if (!data || !searchQuery) return data;
 
@@ -451,27 +695,46 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-2 border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">File Explorer</span>
-          {filters.getAppliedExtensions().length > 0 && (
-            <Badge
-              variant={totalFilterMatches > 0 ? 'secondary' : 'outline'}
-              className="text-xs"
-              title="Files matching current Codefetch filters"
-            >
-              {totalFilterMatches} matched
+      <div className="flex flex-col gap-2 p-2 border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">File Explorer</span>
+            <Badge variant="default" className="text-xs" title="Total selected files">
+              {selectedCount} selected
             </Badge>
-          )}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleReset}
+              disabled={
+                manualSelections.checked.size === 0 && manualSelections.unchecked.size === 0
+              }
+            >
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setIsSearching(!isSearching)}
+            >
+              <Search className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={() => setIsSearching(!isSearching)}
-        >
-          <Search className="h-3 w-3" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleSelectAll}>
+            <CheckSquare className="h-3 w-3 mr-1" />
+            Select All
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleDeselectAll}>
+            <Square className="h-3 w-3 mr-1" />
+            Deselect All
+          </Button>
+        </div>
       </div>
 
       {isSearching && (
@@ -507,6 +770,8 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
             selectedPath={selectedPath}
             expandedPaths={expandedPaths}
             toggleExpandedPath={toggleExpandedPath}
+            manualSelections={manualSelections}
+            onManualSelectionChange={handleManualSelectionChange}
           />
         ) : (
           <div className="px-3 py-2 text-xs text-muted-foreground">No files found</div>

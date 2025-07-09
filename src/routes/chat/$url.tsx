@@ -1,11 +1,22 @@
 import AssistantChat from '~/components/chat/assistant-chat';
 import { SimpleFileTree } from '~/components/simple-file-tree';
 import { CodefetchFilters } from '~/components/codefetch-filters';
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { cn } from '~/lib/utils';
-import { FileCode, Eye, X, Plus, AlertCircle, RefreshCw, Loader2, FolderOpen } from 'lucide-react';
+import {
+  FileCode,
+  Eye,
+  X,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  FolderOpen,
+  Download,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { isUrl } from '~/utils/is-url';
 import { Skeleton } from '~/components/ui/skeleton';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
@@ -14,9 +25,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Progress } from '~/components/ui/progress';
 import { Badge } from '~/components/ui/badge';
 import { FetchResultImpl, FileNode } from 'codefetch-sdk';
+import prompts from 'codefetch-sdk/prompts';
 import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
 import { filterFileTree } from '~/utils/filter-file-tree';
 import { MarkdownPreview } from '~/components/markdown-preview';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '~/components/ui/dropdown-menu';
 
 export const Route = createFileRoute({
   component: ChatRoute,
@@ -99,10 +124,16 @@ function ChatRoute() {
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
-  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('chat');
+  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('filters');
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<string>('none');
+  const [manualSelections, setManualSelections] = useState<{
+    checked: Set<string>;
+    unchecked: Set<string>;
+  }>({ checked: new Set(), unchecked: new Set() });
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
@@ -139,8 +170,8 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const previewMarkdown = useMemo(() => {
     if (!scrapedData?.root) return '';
 
-    // Filter the file tree based on current filters
-    const filteredRoot = filterFileTree(scrapedData.root, filters);
+    // Filter the file tree based on current filters and manual selections
+    const filteredRoot = filterFileTree(scrapedData.root, filters, manualSelections);
 
     if (!filteredRoot) {
       return '# No files match the current filters\n\nPlease adjust your filters to see content.';
@@ -156,12 +187,44 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
         source: url,
       });
       // Convert to markdown
-      return fetchResult.toMarkdown();
+      const codebaseMarkdown = fetchResult.toMarkdown();
+
+      // Add selected prompt if not 'none'
+      if (selectedPrompt && selectedPrompt !== 'none') {
+        let promptText = '';
+
+        // Access the prompts directly from the imported object
+        if (prompts && typeof prompts === 'object') {
+          switch (selectedPrompt) {
+            case 'codegen':
+              promptText = prompts.codegen || '';
+              break;
+            case 'fix':
+              promptText = prompts.fix || '';
+              break;
+            case 'improve':
+              promptText = prompts.improve || '';
+              break;
+            case 'testgen':
+              promptText = prompts.testgen || '';
+              break;
+          }
+        }
+
+        if (promptText) {
+          // Replace template variables
+          promptText = promptText.replace('{{CURRENT_CODEBASE}}', codebaseMarkdown);
+          promptText = promptText.replace('{{MESSAGE}}', ''); // Empty for now
+          return promptText;
+        }
+      }
+
+      return codebaseMarkdown;
     } catch (err) {
       console.error('Error generating preview:', err);
       return '# Error generating preview\n\nUnable to generate markdown preview.';
     }
-  }, [scrapedData, filters, url, metadata]);
+  }, [scrapedData, filters, url, metadata, selectedPrompt, manualSelections]);
 
   // Start scraping only once per URL
   useEffect(() => {
@@ -248,6 +311,51 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     }
   };
 
+  // Download functionality
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadMarkdown = () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `codebase-${timestamp}.md`;
+    downloadFile(previewMarkdown, filename, 'text/markdown');
+  };
+
+  const handleDownloadXML = () => {
+    // Convert markdown to simple XML structure
+    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<codebase>
+  <source>${url}</source>
+  <timestamp>${new Date().toISOString()}</timestamp>
+  <content><![CDATA[${previewMarkdown}]]></content>
+</codebase>`;
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `codebase-${timestamp}.xml`;
+    downloadFile(xmlContent, filename, 'application/xml');
+  };
+
+  const handleCopyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(previewMarkdown);
+      setCopiedToClipboard(true);
+      setTimeout(() => {
+        setCopiedToClipboard(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -282,7 +390,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           {/* Tab Header */}
           <div className="flex h-12 items-center gap-2 border-b px-3 bg-muted/30">
             <div className="relative flex w-fit min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-              <button
+              {/* <button
                 className={cn(
                   'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
                   activeLeftTab === 'chat'
@@ -293,7 +401,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 onClick={() => setActiveLeftTab('chat')}
               >
                 <div className="truncate">Chat</div>
-              </button>
+              </button> */}
               <button
                 className={cn(
                   'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
@@ -311,11 +419,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
 
           {/* Content Area */}
           <div className="relative flex h-full min-w-0 flex-1 flex-col">
-            {activeLeftTab === 'chat' ? (
+            {activeLeftTab === 'chat' && (
               <div className="flex-1 overflow-hidden">
                 <AssistantChat />
               </div>
-            ) : (
+            )}
+            {activeLeftTab === 'filters' && (
               <div className="flex-1 overflow-hidden">
                 <CodefetchFilters />
               </div>
@@ -379,22 +488,93 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 <TabsList className="h-7 bg-transparent p-0 gap-2">
                   <TabsTrigger
                     value="code"
-                    className="h-7 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                    className="h-8 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <FileCode className="w-3.5 h-3.5 mr-1.5" />
                     Code
                   </TabsTrigger>
                   <TabsTrigger
                     value="preview"
-                    className="h-7 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                    className="h-8 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <Eye className="w-3.5 h-3.5 mr-1.5" />
                     Preview
                   </TabsTrigger>
                 </TabsList>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={handleCopyToClipboard}
+                    disabled={!previewMarkdown}
+                  >
+                    {copiedToClipboard ? (
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    {copiedToClipboard ? 'Copied' : 'Copy'}
+                  </Button>
+                  <div className="flex items-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2 rounded-r-none border-r-0"
+                      onClick={handleDownloadMarkdown}
+                      disabled={!previewMarkdown}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Download
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 rounded-l-none"
+                          disabled={!previewMarkdown}
+                        >
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 15 15"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-3 w-3"
+                          >
+                            <path
+                              d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z"
+                              fill="currentColor"
+                              fillRule="evenodd"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleDownloadMarkdown}>
+                          Download as Markdown (.md)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleDownloadXML}>
+                          Download as XML (.xml)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <Select value={selectedPrompt} onValueChange={setSelectedPrompt}>
+                    <SelectTrigger size="sm">
+                      <SelectValue placeholder="Add prompt" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No prompt</SelectItem>
+                      <SelectItem value="codegen">Code Generation</SelectItem>
+                      <SelectItem value="fix">Fix Issues</SelectItem>
+                      <SelectItem value="improve">Improve Code</SelectItem>
+                      <SelectItem value="testgen">Generate Tests</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </Tabs>
           </div>
@@ -487,6 +667,8 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                         data={scrapedData?.root}
                         onFileSelect={handleFileOpen}
                         selectedPath={activeFileId || undefined}
+                        onManualSelectionsChange={setManualSelections}
+                        initialManualSelections={manualSelections}
                       />
                     )}
                   </div>
