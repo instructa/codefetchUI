@@ -344,7 +344,8 @@ function SimpleFileTreeNode({
             onClick={handleToggle}
             className={cn(
               'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm',
-              isSelected && 'bg-accent text-accent-foreground'
+              isSelected && 'bg-accent text-accent-foreground',
+              !checkedChildrenCount && 'opacity-70'
             )}
             style={{ paddingLeft }}
           >
@@ -401,7 +402,7 @@ function SimpleFileTreeNode({
       className={cn(
         'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm transition-opacity',
         isSelected && 'bg-accent text-accent-foreground',
-        !checkboxState && 'opacity-60'
+        !checkboxState && 'opacity-70'
       )}
       style={{ paddingLeft }}
     >
