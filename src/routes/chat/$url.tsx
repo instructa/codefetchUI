@@ -1,11 +1,11 @@
 import AssistantChat from '~/components/chat/assistant-chat';
 import { SimpleFileTree } from '~/components/simple-file-tree';
 import { CodefetchFilters } from '~/components/codefetch-filters';
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { cn } from '~/lib/utils';
-import { FileCode, Eye, X, Plus, AlertCircle, RefreshCw, Loader2, FolderOpen } from 'lucide-react';
+import { FileCode, Eye, X, AlertCircle, RefreshCw, Loader2, FolderOpen } from 'lucide-react';
 import { isUrl } from '~/utils/is-url';
 import { Skeleton } from '~/components/ui/skeleton';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
@@ -14,9 +14,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Progress } from '~/components/ui/progress';
 import { Badge } from '~/components/ui/badge';
 import { FetchResultImpl, FileNode } from 'codefetch-sdk';
+import prompts from 'codefetch-sdk/prompts';
 import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
 import { filterFileTree } from '~/utils/filter-file-tree';
 import { MarkdownPreview } from '~/components/markdown-preview';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select';
 
 export const Route = createFileRoute({
   component: ChatRoute,
@@ -103,6 +111,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<string>('none');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
@@ -156,12 +165,51 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
         source: url,
       });
       // Convert to markdown
-      return fetchResult.toMarkdown();
+      const codebaseMarkdown = fetchResult.toMarkdown();
+
+      // Add selected prompt if not 'none'
+      if (selectedPrompt && selectedPrompt !== 'none') {
+        let promptText = '';
+
+        // Access the prompts directly from the imported object
+        if (prompts && typeof prompts === 'object') {
+          switch (selectedPrompt) {
+            case 'codegen':
+              promptText = prompts.codegen || '';
+              break;
+            case 'fix':
+              promptText = prompts.fix || '';
+              break;
+            case 'improve':
+              promptText = prompts.improve || '';
+              break;
+            case 'testgen':
+              promptText = prompts.testgen || '';
+              break;
+          }
+        }
+
+        console.log(
+          'Selected prompt:',
+          selectedPrompt,
+          'Prompt text:',
+          promptText?.substring(0, 100)
+        );
+
+        if (promptText) {
+          // Replace template variables
+          promptText = promptText.replace('{{CURRENT_CODEBASE}}', codebaseMarkdown);
+          promptText = promptText.replace('{{MESSAGE}}', ''); // Empty for now
+          return promptText;
+        }
+      }
+
+      return codebaseMarkdown;
     } catch (err) {
       console.error('Error generating preview:', err);
       return '# Error generating preview\n\nUnable to generate markdown preview.';
     }
-  }, [scrapedData, filters, url, metadata]);
+  }, [scrapedData, filters, url, metadata, selectedPrompt]);
 
   // Start scraping only once per URL
   useEffect(() => {
@@ -392,9 +440,18 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                     Preview
                   </TabsTrigger>
                 </TabsList>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
+                <Select value={selectedPrompt} onValueChange={setSelectedPrompt}>
+                  <SelectTrigger className="h-7 w-32">
+                    <SelectValue placeholder="Add prompt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No prompt</SelectItem>
+                    <SelectItem value="codegen">Code Generation</SelectItem>
+                    <SelectItem value="fix">Fix Issues</SelectItem>
+                    <SelectItem value="improve">Improve Code</SelectItem>
+                    <SelectItem value="testgen">Generate Tests</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </Tabs>
           </div>
