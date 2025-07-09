@@ -1,5 +1,5 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
-import { fetch as codefetchFetch } from 'codefetch-sdk';
+import { fetch as codefetchFetch, type FetchResultImpl } from 'codefetch-sdk';
 import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
 
@@ -67,11 +67,11 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // In Cloudflare Workers, always disable filesystem cache
       const isWorkerEnvironment = (context as any)?.cloudflare?.env;
 
-      const codefetch = await codefetchFetch({
+      const codefetch = (await codefetchFetch({
         source: targetUrl,
         format: 'json',
         noCache: isWorkerEnvironment ? true : undefined,
-      } as any);
+      } as any)) as FetchResultImpl;
 
       // Check if result is valid
       if (typeof codefetch === 'string' || !('root' in codefetch)) {

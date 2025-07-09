@@ -1,7 +1,7 @@
 import AssistantChat from '~/components/chat/assistant-chat';
 import { SimpleFileTree } from '~/components/simple-file-tree';
 import { CodefetchFilters } from '~/components/codefetch-filters';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { cn } from '~/lib/utils';
@@ -13,6 +13,10 @@ import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Progress } from '~/components/ui/progress';
 import { Badge } from '~/components/ui/badge';
+import { FetchResultImpl, FileNode } from 'codefetch-sdk';
+import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
+import { filterFileTree } from '~/utils/filter-file-tree';
+import { MarkdownPreview } from '~/components/markdown-preview';
 
 export const Route = createFileRoute({
   component: ChatRoute,
@@ -127,6 +131,37 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       },
     }
   );
+
+  // Get codefetch filters
+  const filters = useCodefetchFilters();
+
+  // Generate markdown preview from filtered data
+  const previewMarkdown = useMemo(() => {
+    if (!scrapedData?.root) return '';
+
+    // Filter the file tree based on current filters
+    const filteredRoot = filterFileTree(scrapedData.root, filters);
+
+    if (!filteredRoot) {
+      return '# No files match the current filters\n\nPlease adjust your filters to see content.';
+    }
+
+    try {
+      // Create FetchResultImpl instance with filtered data
+      const fetchResult = new FetchResultImpl(filteredRoot as FileNode, {
+        totalFiles: 0, // Will be calculated by FetchResultImpl
+        totalSize: 0,
+        totalTokens: 0,
+        fetchedAt: new Date(),
+        source: url,
+      });
+      // Convert to markdown
+      return fetchResult.toMarkdown();
+    } catch (err) {
+      console.error('Error generating preview:', err);
+      return '# Error generating preview\n\nUnable to generate markdown preview.';
+    }
+  }, [scrapedData, filters, url, metadata]);
 
   // Start scraping only once per URL
   useEffect(() => {
@@ -589,10 +624,22 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 </div>
               </TabsContent>
               <TabsContent value="preview" className="h-full m-0">
-                <div className="h-full flex items-center justify-center bg-white">
-                  <div className="text-center text-muted-foreground">
-                    <Eye className="w-12 h-12 mx-auto mb-3" />
-                    <p className="text-sm">Preview will be displayed here</p>
+                <div className="h-full overflow-auto bg-background">
+                  <div className="p-6">
+                    <Card className="shadow-none border-0">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileCode className="h-5 w-5" />
+                          Markdown Preview
+                        </CardTitle>
+                        <CardDescription>
+                          Filtered content from {metadata?.title || url}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <MarkdownPreview content={previewMarkdown} />
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
               </TabsContent>
