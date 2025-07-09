@@ -4,7 +4,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import {
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   createRootRouteWithContext,
@@ -19,8 +18,8 @@ import { authClient } from '~/lib/auth-client';
 import { getTheme } from '~/lib/theme';
 import type { Theme } from '~/lib/theme';
 import { seo } from '~/utils/seo';
-import appCss from '../styles/app.css?url';
-import customCss from '../styles/custom.css?url';
+import appCss from '~/styles/app.css?url';
+import customCss from '~/styles/custom.css?url';
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
