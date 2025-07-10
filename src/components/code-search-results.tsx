@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Code, FileText, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Code, FileText, Search, Plus, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
 import { Badge } from '~/components/ui/badge';
@@ -10,6 +10,7 @@ import type {
   GrepMetadata,
   GrepResult,
   GrepSummary,
+  GrepSuggestion,
 } from '~/hooks/use-interactive-grep';
 
 interface CodeSearchResultsProps {
@@ -23,6 +24,7 @@ export function CodeSearchResults({ results, isSearching }: CodeSearchResultsPro
   const metadata = results.find((r) => r.type === 'metadata') as GrepMetadata | undefined;
   const matches = results.filter((r) => r.type === 'match') as GrepMatch[];
   const summary = results.find((r) => r.type === 'summary') as GrepSummary | undefined;
+  const suggestions = results.filter((r) => r.type === 'suggestion') as GrepSuggestion[];
 
   // Group matches by file
   const matchesByFile = matches.reduce(
@@ -75,7 +77,14 @@ export function CodeSearchResults({ results, isSearching }: CodeSearchResultsPro
       {metadata && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Generated Pattern</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              Generated Pattern
+              {metadata.intent && (
+                <Badge variant="outline" className="text-xs">
+                  {metadata.intent}
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
@@ -86,6 +95,36 @@ export function CodeSearchResults({ results, isSearching }: CodeSearchResultsPro
                 <Badge key={lang} variant="secondary" className="text-xs">
                   {lang}
                 </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {suggestions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Suggested Locations
+            </CardTitle>
+            <CardDescription>
+              Based on your codebase structure, these are good locations for new files
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {suggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4 text-muted-foreground" />
+                    <code className="text-sm">{suggestion.path}</code>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{suggestion.reason}</span>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -161,10 +200,17 @@ export function CodeSearchResults({ results, isSearching }: CodeSearchResultsPro
         </Card>
       )}
 
-      {summary && Object.keys(matchesByFile).length === 0 && (
+      {summary && Object.keys(matchesByFile).length === 0 && suggestions.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">No matches found in {summary.totalFiles} files.</p>
+            <p className="text-muted-foreground">
+              No matches found in {summary.totalFiles} files.
+              {summary.wasAiTransformed && (
+                <span className="block mt-2 text-sm">
+                  Try rephrasing your query or use direct ast-grep syntax.
+                </span>
+              )}
+            </p>
           </CardContent>
         </Card>
       )}

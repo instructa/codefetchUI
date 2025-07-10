@@ -12,15 +12,25 @@ export interface GrepMetadata {
   type: 'metadata';
   rule: string;
   languages: string[];
+  intent?: 'refactor' | 'debug' | 'add' | 'find' | 'other';
+  suggestedPaths?: string[];
 }
 
 export interface GrepSummary {
   type: 'summary';
   totalFiles: number;
   totalMatches: number;
+  wasAiTransformed?: boolean;
+  intent?: 'refactor' | 'debug' | 'add' | 'find' | 'other';
 }
 
-export type GrepResult = GrepMatch | GrepMetadata | GrepSummary;
+export interface GrepSuggestion {
+  type: 'suggestion';
+  path: string;
+  reason: string;
+}
+
+export type GrepResult = GrepMatch | GrepMetadata | GrepSummary | GrepSuggestion;
 
 interface UseInteractiveGrepReturn {
   searchCode: (prompt: string) => Promise<void>;

@@ -17,6 +17,16 @@ interface GeneratedRule {
   language?: string[];
 }
 
+interface AiTransformResult {
+  rule: {
+    pattern: string;
+    languages?: string[];
+    kind?: string;
+  };
+  suggestedPaths?: string[];
+  intent: 'refactor' | 'debug' | 'add' | 'find' | 'other';
+}
+
 const FEW_SHOT_EXAMPLES = `
 You are an expert at converting natural language queries into ast-grep patterns.
 
@@ -66,6 +76,19 @@ languages: [javascript, typescript]
 `;
 
 async function generateAstGrepRule(prompt: string): Promise<GeneratedRule | null> {
+  // Check if the prompt is already an AI-transformed result
+  try {
+    const parsed = JSON.parse(prompt) as AiTransformResult;
+    if (parsed.rule && parsed.rule.pattern) {
+      return {
+        pattern: parsed.rule.pattern,
+        language: parsed.rule.languages,
+      };
+    }
+  } catch {
+    // Not JSON, continue with original logic
+  }
+
   // For now, we'll use a simple pattern matching approach
   // In a real implementation, this would call an LLM API
 
@@ -190,6 +213,17 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
         );
       }
 
+      // Parse AI-transformed result if present
+      let aiResult: AiTransformResult | null = null;
+      try {
+        const parsed = JSON.parse(prompt);
+        if (parsed.rule && parsed.intent) {
+          aiResult = parsed as AiTransformResult;
+        }
+      } catch {
+        // Not AI-transformed, continue with normal flow
+      }
+
       // Generate ast-grep rule from prompt
       const rule = await generateAstGrepRule(prompt);
 
@@ -220,15 +254,17 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
       const stream = new ReadableStream({
         async start(controller) {
           // Send the generated rule as metadata first
-          controller.enqueue(
-            encoder.encode(
-              JSON.stringify({
-                type: 'metadata',
-                rule: rule.pattern,
-                languages: rule.language,
-              }) + '\n'
-            )
-          );
+          const metadata = {
+            type: 'metadata',
+            rule: rule.pattern,
+            languages: rule.language,
+            ...(aiResult && {
+              intent: aiResult.intent,
+              suggestedPaths: aiResult.suggestedPaths,
+            }),
+          };
+
+          controller.enqueue(encoder.encode(JSON.stringify(metadata) + '\n'));
 
           // Process files and stream results
           let totalMatches = 0;
@@ -249,6 +285,21 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
             }
           }
 
+          // If AI suggested paths for additions and no matches found
+          if (aiResult?.suggestedPaths && totalMatches === 0 && aiResult.intent === 'add') {
+            for (const suggestedPath of aiResult.suggestedPaths) {
+              controller.enqueue(
+                encoder.encode(
+                  JSON.stringify({
+                    type: 'suggestion',
+                    path: suggestedPath,
+                    reason: 'Suggested location for new file',
+                  }) + '\n'
+                )
+              );
+            }
+          }
+
           // Send summary
           controller.enqueue(
             encoder.encode(
@@ -256,6 +307,10 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
                 type: 'summary',
                 totalFiles: sourceFiles.length,
                 totalMatches,
+                ...(aiResult && {
+                  wasAiTransformed: true,
+                  intent: aiResult.intent,
+                }),
               }) + '\n'
             )
           );

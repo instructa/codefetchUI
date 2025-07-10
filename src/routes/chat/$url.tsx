@@ -47,6 +47,13 @@ import {
 } from '~/components/ui/dropdown-menu';
 import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
 import { CodeSearchResults } from '~/components/code-search-results';
+import { GeminiApiKeyModal } from '~/components/gemini-api-key-modal';
+import {
+  isNaturalLanguagePrompt,
+  getGeminiApiKey,
+  transformPromptToAstGrepRule,
+} from '~/utils/ast-grep-ai';
+import { Settings } from 'lucide-react';
 
 export const Route = createFileRoute('/chat/$url')({
   component: ChatRoute,
@@ -140,6 +147,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   }>({ checked: new Set(), unchecked: new Set() });
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [codeSearchQuery, setCodeSearchQuery] = useState('');
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -370,6 +378,43 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     }
   };
 
+  // Handle code search with AI transformation
+  const handleCodeSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codeSearchQuery.trim()) return;
+
+    const isNaturalLanguage = isNaturalLanguagePrompt(codeSearchQuery);
+
+    if (isNaturalLanguage) {
+      // Check if API key exists
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        setShowApiKeyModal(true);
+        return;
+      }
+
+      try {
+        // Get file tree context (simplified for now)
+        const fileTreeContext = scrapedData?.root
+          ? JSON.stringify(scrapedData.root, null, 2).slice(0, 500) + '...'
+          : '';
+
+        // Transform prompt to ast-grep rule
+        const result = await transformPromptToAstGrepRule(codeSearchQuery, fileTreeContext);
+
+        // Search with the transformed rule
+        await searchCode(JSON.stringify(result));
+      } catch (error) {
+        console.error('AI transformation failed:', error);
+        // Fallback to basic search
+        await searchCode(codeSearchQuery);
+      }
+    } else {
+      // Direct ast-grep syntax, use as-is
+      await searchCode(codeSearchQuery);
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -458,17 +503,21 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
             {activeLeftTab === 'search' && (
               <div className="flex-1 overflow-hidden flex flex-col">
                 <div className="p-4 border-b">
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (codeSearchQuery.trim()) {
-                        searchCode(codeSearchQuery);
-                      }
-                    }}
-                    className="flex gap-2"
-                  >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium">AI-Enhanced Code Search</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowApiKeyModal(true)}
+                      className="h-7 gap-1"
+                    >
+                      <Settings className="h-3 w-3" />
+                      API Key
+                    </Button>
+                  </div>
+                  <form onSubmit={handleCodeSearch} className="flex gap-2">
                     <Input
-                      placeholder="e.g., find all async functions, React components..."
+                      placeholder="e.g., find all async functions, add a new contact page..."
                       value={codeSearchQuery}
                       onChange={(e) => setCodeSearchQuery(e.target.value)}
                       className="flex-1"
@@ -484,6 +533,11 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                   </form>
                   {codeSearchError && (
                     <div className="mt-2 text-sm text-destructive">{codeSearchError}</div>
+                  )}
+                  {codeSearchQuery && isNaturalLanguagePrompt(codeSearchQuery) && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Using AI to transform your natural language query...
+                    </p>
                   )}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
@@ -891,6 +945,9 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           </div>
         </div>
       </div>
+
+      {/* Gemini API Key Modal */}
+      <GeminiApiKeyModal open={showApiKeyModal} onOpenChange={setShowApiKeyModal} />
     </div>
   );
 }
