@@ -10,12 +10,12 @@ import {
   X,
   FolderSync,
 } from 'lucide-react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, createFileRoute } from '@tanstack/react-router';
 import { cn } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone';
 import { Input } from '~/components/ui/input';
 
-export const Route = createFileRoute({
+export const Route = createFileRoute('/chat/')({
   component: ChatIndex,
 });
 

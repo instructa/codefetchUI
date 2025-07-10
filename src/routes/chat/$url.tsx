@@ -1,3 +1,4 @@
+import { createFileRoute } from '@tanstack/react-router'
 import AssistantChat from '~/components/chat/assistant-chat';
 import { SimpleFileTree } from '~/components/simple-file-tree';
 import { CodefetchFilters } from '~/components/codefetch-filters';
@@ -49,7 +50,7 @@ import {
 import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
 import { CodeSearchResults } from '~/components/code-search-results';
 
-export const Route = createFileRoute({
+export const Route = createFileRoute('/chat/$url')({
   component: ChatRoute,
   validateSearch: (search: Record<string, unknown>): { file?: string } => {
     return {
