@@ -98,13 +98,8 @@ function useIsMobile() {
 
   return isMobile;
 }
-import { searchFiles } from '~/lib/stores/scraped-data.store';
-import type {
-  GrepResult,
-  GrepMetadata,
-  GrepMatch,
-  GrepSummary,
-} from '~/hooks/use-interactive-grep';
+
+import { decodeUrlFromRoute } from '~/utils/url-encoding';
 
 export const Route = createFileRoute('/chat/$url')({
   component: ChatRoute,
@@ -114,11 +109,16 @@ export const Route = createFileRoute('/chat/$url')({
     };
   },
   loader: async ({ params }) => {
-    const decodedUrl = decodeURIComponent(params.url);
-    if (!isUrl(decodedUrl)) {
-      return { isValidUrl: false, url: decodedUrl };
+    try {
+      const decodedUrl = decodeUrlFromRoute(params.url);
+      if (!isUrl(decodedUrl)) {
+        return { isValidUrl: false, url: decodedUrl };
+      }
+      return { isValidUrl: true, url: decodedUrl };
+    } catch (error) {
+      console.error('Failed to decode URL:', error);
+      return { isValidUrl: false, url: params.url };
     }
-    return { isValidUrl: true, url: decodedUrl };
   },
   pendingComponent: LoadingComponent,
   errorComponent: ErrorComponent,
