@@ -25,7 +25,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -45,7 +44,6 @@ import {
   Upload,
   Settings,
 } from 'lucide-react';
-import { cn } from '~/lib/utils';
 
 /**
  * CodefetchFilters Component
