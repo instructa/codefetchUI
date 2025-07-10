@@ -22,7 +22,6 @@
     "ex0": "tsx cli/index.ts",
     "rules:setup": "./scripts/setup-ai-rules.sh",
     "rules:sync": "./scripts/setup-ai-rules.sh",
-    "rules:list": "vibe-rules list",
     "deploy": "bun ./alchemy.run.ts",
     "deploy:dev": "bun --watch ./alchemy.run.ts --dev",
     "deploy:prod": "bun ./alchemy.run.ts --stage prod",
@@ -94,7 +93,6 @@
     "tailwindcss": "^4.1.8",
     "tsx": "^4.19.4",
     "vaul": "^1.1.2",
-    "vibe-rules": "^0.3.41",
     "vite": "^6.3.5",
     "zod": "^3.25.56",
     "zustand": "^5.0.6"
