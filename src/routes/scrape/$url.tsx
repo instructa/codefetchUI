@@ -1,4 +1,4 @@
-;
+import { createFileRoute } from '@tanstack/react-router'
 import { isUrl } from '~/utils/is-url';
 import { AlertCircle, Globe, RefreshCw, Loader2, FileCode, FolderOpen } from 'lucide-react';
 import { Button } from '~/components/ui/button';
@@ -10,7 +10,7 @@ import { Badge } from '~/components/ui/badge';
 import { Progress } from '~/components/ui/progress';
 import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 
-export const Route = createFileRoute({
+export const Route = createFileRoute('/scrape/$url')({
   component: DashboardDynamicPage,
   validateSearch: (search: Record<string, unknown>): { file?: string } => {
     return {

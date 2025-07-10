@@ -1,4 +1,4 @@
-import {  Outlet, useNavigate, useParams } from '@tanstack/react-router';
+import { Outlet, useNavigate, useParams, createFileRoute } from '@tanstack/react-router';
 import { AppSidebar } from '~/components/app-sidebar';
 import { SiteHeader } from '~/components/site-header';
 import { SidebarInset, SidebarProvider } from '~/components/ui/sidebar';
@@ -17,7 +17,7 @@ const searchSchema = z.object({
   }),
 });
 
-export const Route = createFileRoute({
+export const Route = createFileRoute('/scrape')({
   // All children (/dashboard, /dashboard/settings, etc.) inherit this guard
   // beforeLoad: async ({ location }) => {
   //   const session = await getSession();

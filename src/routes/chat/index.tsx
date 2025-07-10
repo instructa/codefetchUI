@@ -10,12 +10,12 @@ import {
   X,
   FolderSync,
 } from 'lucide-react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, createFileRoute } from '@tanstack/react-router';
 import { cn } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone';
 import { Input } from '~/components/ui/input';
 
-export const Route = createFileRoute({
+export const Route = createFileRoute('/chat/')({
   component: ChatIndex,
 });
 
@@ -63,7 +63,7 @@ function ChatIndex() {
       // Navigate to the chat/$url route
       navigate({
         to: '/chat/$url',
-        params: { url: encodeURIComponent(processedUrl) },
+        params: { url: processedUrl },
       });
     } else if (uploadedFile) {
       // TODO: Implement file upload processing

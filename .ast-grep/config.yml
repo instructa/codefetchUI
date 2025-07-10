@@ -1,0 +1,4 @@
+root: .
+language: ["typescript", "javascript"]
+ruleDirs:
+  - "./rules"

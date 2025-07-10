@@ -1,0 +1,11 @@
+id: db-model
+languages: [typescript, javascript]
+message: "Database schema/model declaration"
+severity: info
+pattern: |
+  export const $MODEL = mongoose.model("$NAME", $SCHEMA)
+holes:
+  MODEL:  { kind: identifier }
+  NAME:   { kind: string_literal }
+metadata:
+  bucket: model
