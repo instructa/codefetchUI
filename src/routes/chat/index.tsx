@@ -63,7 +63,7 @@ function ChatIndex() {
       // Navigate to the chat/$url route
       navigate({
         to: '/chat/$url',
-        params: { url: encodeURIComponent(processedUrl) },
+        params: { url: processedUrl },
       });
     } else if (uploadedFile) {
       // TODO: Implement file upload processing

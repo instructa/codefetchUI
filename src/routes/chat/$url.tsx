@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router';
 import AssistantChat from '~/components/chat/assistant-chat';
 import { SimpleFileTree } from '~/components/simple-file-tree';
 import { CodefetchFilters } from '~/components/codefetch-filters';
@@ -17,11 +17,9 @@ import {
   Download,
   Copy,
   Check,
-  Sparkles,
   Search,
 } from 'lucide-react';
 import { Input } from '~/components/ui/input';
-import { useStreamingAstGrep } from '~/hooks/use-streaming-ast-grep';
 import { isUrl } from '~/utils/is-url';
 import { Skeleton } from '~/components/ui/skeleton';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
@@ -141,17 +139,8 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     unchecked: Set<string>;
   }>({ checked: new Set(), unchecked: new Set() });
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  const [contextResource, setContextResource] = useState('');
-  const [contextIntent, setContextIntent] = useState<'api' | 'model' | 'ui'>('api');
   const [codeSearchQuery, setCodeSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const {
-    startGeneration: startContextGeneration,
-    isLoading: isContextLoading,
-    error: contextError,
-    data: contextData,
-  } = useStreamingAstGrep();
 
   const {
     searchCode,
@@ -573,13 +562,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                     <Eye className="w-3.5 h-3.5 mr-1.5" />
                     Preview
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="context"
-                    className="h-8 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                    Context
-                  </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-2">
                   <Button
@@ -642,42 +624,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <Input
-                    placeholder="resource"
-                    value={contextResource}
-                    onChange={(e) => setContextResource(e.target.value)}
-                    className="h-8 w-28"
-                  />
-
-                  <Select
-                    value={contextIntent}
-                    onValueChange={(v) => setContextIntent(v as 'api' | 'model' | 'ui')}
-                  >
-                    <SelectTrigger size="sm" className="h-8 w-24">
-                      <SelectValue placeholder="Intent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="api">API</SelectItem>
-                      <SelectItem value="model">Model</SelectItem>
-                      <SelectItem value="ui">UI</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    disabled={!contextResource.trim() || isContextLoading}
-                    onClick={() => startContextGeneration(contextResource.trim(), contextIntent)}
-                  >
-                    {isContextLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5 mr-1" />
-                    )}
-                    Ctx
-                  </Button>
-
                   <Select value={selectedPrompt} onValueChange={setSelectedPrompt}>
                     <SelectTrigger size="sm">
                       <SelectValue placeholder="Add prompt" />
@@ -938,32 +884,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                         <MarkdownPreview content={previewMarkdown} />
                       </CardContent>
                     </Card>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="context" className="h-full m-0">
-                <div className="h-full overflow-auto bg-background">
-                  <div className="p-6">
-                    {isContextLoading && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Generating context…</span>
-                      </div>
-                    )}
-
-                    {contextError && <p className="text-destructive">{contextError.message}</p>}
-
-                    {!isContextLoading && !contextError && contextData && (
-                      <pre className="text-sm whitespace-pre-wrap">
-                        {JSON.stringify(contextData, null, 2)}
-                      </pre>
-                    )}
-
-                    {!isContextLoading && !contextError && !contextData && (
-                      <p className="text-muted-foreground text-sm">
-                        Enter a resource and click <em>Ctx</em> to generate ast‑grep context.
-                      </p>
-                    )}
                   </div>
                 </div>
               </TabsContent>
