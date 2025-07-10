@@ -787,18 +787,18 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
             {/* Tab Header */}
             <div className="flex h-12 items-center gap-2 border-b px-3 bg-muted/30">
               <div className="relative flex w-fit min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-                {/* <button
-                className={cn(
-                  'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
-                  activeLeftTab === 'chat'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'hover:bg-muted/50 bg-transparent text-muted-foreground'
-                )}
-                data-active-tab={activeLeftTab === 'chat'}
-                onClick={() => setActiveLeftTab('chat')}
-              >
-                <div className="truncate">Chat</div>
-              </button> */}
+                <button
+                  className={cn(
+                    'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
+                    activeLeftTab === 'chat'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'hover:bg-muted/50 bg-transparent text-muted-foreground'
+                  )}
+                  data-active-tab={activeLeftTab === 'chat'}
+                  onClick={() => setActiveLeftTab('chat')}
+                >
+                  <div className="truncate">Chat</div>
+                </button>
                 <button
                   className={cn(
                     'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
