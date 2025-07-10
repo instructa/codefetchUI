@@ -73,10 +73,10 @@ function useIsMobile() {
 
     // Check on mount (in case SSR initial state was wrong)
     checkMobile();
-    
+
     // Add resize listener
     window.addEventListener('resize', checkMobile);
-    
+
     // Cleanup
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
@@ -411,7 +411,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   // Mobile Layout
   if (isMobile) {
     return (
-      <div className="flex flex-col h-full bg-background">
+      <div className="flex flex-col h-screen bg-background relative">
         {/* Mobile Header */}
         <div className="flex items-center justify-between p-3 border-b bg-background">
           <div className="flex-1 mr-2">
@@ -429,9 +429,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
-                  <SheetDescription>
-                    Configure file filters for the codebase
-                  </SheetDescription>
+                  <SheetDescription>Configure file filters for the codebase</SheetDescription>
                 </SheetHeader>
                 <div className="mt-4">
                   <CodefetchFilters />
@@ -464,9 +462,13 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           </div>
         </div>
 
-        {/* Mobile Content Area */}
-        <div className="flex-1 overflow-hidden">
-          <Tabs value={activeRightTab} onValueChange={setActiveRightTab} className="h-full flex flex-col">
+        {/* Mobile Content Area - Now with padding bottom for fixed nav */}
+        <div className="flex-1 overflow-hidden mb-14">
+          <Tabs
+            value={activeRightTab}
+            onValueChange={setActiveRightTab}
+            className="h-full flex flex-col"
+          >
             <TabsContent value="code" className="flex-1 m-0 overflow-hidden">
               <div className="h-full flex flex-col">
                 {/* Collapsible File Tree Header */}
@@ -550,7 +552,9 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                             <p className="text-xs text-muted-foreground">{file.path}</p>
                             <div className="flex gap-2 mt-2">
                               {file.language && (
-                                <Badge variant="secondary" className="text-xs">{file.language}</Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {file.language}
+                                </Badge>
                               )}
                               {file.size && (
                                 <Badge variant="outline" className="text-xs">
@@ -616,19 +620,33 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 </div>
               </div>
             </TabsContent>
-
-            {/* Bottom Tab Navigation */}
-            <TabsList className="grid w-full grid-cols-2 h-14 rounded-none border-t bg-background">
-              <TabsTrigger value="code" className="h-full rounded-none data-[state=active]:bg-muted">
-                <FileCode className="w-4 h-4 mr-2" />
-                Code
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="h-full rounded-none data-[state=active]:bg-muted">
-                <Eye className="w-4 h-4 mr-2" />
-                Preview
-              </TabsTrigger>
-            </TabsList>
           </Tabs>
+        </div>
+
+        {/* Fixed Bottom Tab Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
+          <div className="grid grid-cols-2 h-14">
+            <button
+              onClick={() => setActiveRightTab('code')}
+              className={cn(
+                'flex items-center justify-center h-full transition-colors',
+                activeRightTab === 'code' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+              )}
+            >
+              <FileCode className="w-4 h-4 mr-2" />
+              Code
+            </button>
+            <button
+              onClick={() => setActiveRightTab('preview')}
+              className={cn(
+                'flex items-center justify-center h-full transition-colors',
+                activeRightTab === 'preview' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+              )}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </button>
+          </div>
         </div>
       </div>
     );
