@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { computeFileExtensions } from '~/utils/filter-file-tree';
 
 export interface FileNode {
   name: string;
@@ -23,6 +24,11 @@ export interface ScrapedDataMetadata {
   description?: string;
 }
 
+export interface DynamicExtension {
+  ext: string;
+  count: number;
+}
+
 interface ScrapedDataStore {
   scrapedData: ScrapedData | null;
   metadata: ScrapedDataMetadata | null;
@@ -30,6 +36,7 @@ interface ScrapedDataStore {
   searchQuery: string;
   expandedPaths: Set<string>;
   urlExpandedPaths: Map<string, Set<string>>; // Store expanded paths per URL
+  dynamicExtensions: DynamicExtension[]; // Dynamic extensions from the scraped data
   setScrapedData: (data: ScrapedData | null, metadata: ScrapedDataMetadata | null) => void;
   setSelectedFilePath: (path: string | null) => void;
   setSearchQuery: (query: string) => void;
@@ -47,14 +54,14 @@ const getStoredExpandedPaths = (): Map<string, Set<string>> => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return new Map();
-    
+
     const parsed = JSON.parse(stored);
     const map = new Map<string, Set<string>>();
-    
+
     Object.entries(parsed).forEach(([url, paths]) => {
       map.set(url, new Set(paths as string[]));
     });
-    
+
     return map;
   } catch {
     return new Map();
@@ -80,27 +87,32 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
   searchQuery: '',
   expandedPaths: new Set<string>(),
   urlExpandedPaths: getStoredExpandedPaths(),
+  dynamicExtensions: [],
 
   setScrapedData: (data, metadata) => {
     const state = get();
     const currentUrl = state.metadata?.url;
-    
+
     // Only reset selectedFilePath if we're switching to a different URL
     const shouldResetSelectedFile = currentUrl !== metadata?.url;
-    
+
     // Save current expanded paths before switching
     if (currentUrl && state.expandedPaths.size > 0) {
       state.saveExpandedPathsForUrl(currentUrl);
     }
-    
-    set({ 
-      scrapedData: data, 
+
+    // Compute dynamic extensions from the new data
+    const dynamicExtensions = data ? computeFileExtensions(data.root) : [];
+
+    set({
+      scrapedData: data,
       metadata,
       selectedFilePath: shouldResetSelectedFile ? null : state.selectedFilePath,
       searchQuery: '',
-      expandedPaths: new Set<string>() // Will be loaded in loadExpandedPathsForUrl
+      expandedPaths: new Set<string>(), // Will be loaded in loadExpandedPathsForUrl
+      dynamicExtensions,
     });
-    
+
     // Load expanded paths for the new URL
     if (metadata?.url) {
       get().loadExpandedPathsForUrl(metadata.url);
@@ -123,32 +135,32 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
       } else {
         newExpandedPaths.add(path);
       }
-      
+
       // Save to localStorage immediately
       if (state.metadata?.url) {
         const urlPaths = state.urlExpandedPaths;
         urlPaths.set(state.metadata.url, newExpandedPaths);
         saveStoredExpandedPaths(urlPaths);
       }
-      
+
       return { expandedPaths: newExpandedPaths };
     });
   },
 
   clearData: () => {
     const state = get();
-    
+
     // Save current expanded paths before clearing
     if (state.metadata?.url && state.expandedPaths.size > 0) {
       state.saveExpandedPathsForUrl(state.metadata.url);
     }
-    
+
     set({
       scrapedData: null,
       metadata: null,
       selectedFilePath: null,
       searchQuery: '',
-      expandedPaths: new Set<string>()
+      expandedPaths: new Set<string>(),
     });
   },
 
@@ -158,14 +170,14 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
 
     const findFile = (node: FileNode, targetPath: string): FileNode | null => {
       if (node.path === targetPath) return node;
-      
+
       if (node.children) {
         for (const child of node.children) {
           const found = findFile(child, targetPath);
           if (found) return found;
         }
       }
-      
+
       return null;
     };
 
@@ -176,7 +188,7 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
     set((state) => {
       const storedPaths = state.urlExpandedPaths.get(url);
       return {
-        expandedPaths: storedPaths ? new Set(storedPaths) : new Set<string>()
+        expandedPaths: storedPaths ? new Set(storedPaths) : new Set<string>(),
       };
     });
   },
@@ -188,7 +200,7 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
       saveStoredExpandedPaths(newUrlPaths);
       return { urlExpandedPaths: newUrlPaths };
     });
-  }
+  },
 }));
 
 // Helper function to search files

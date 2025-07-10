@@ -4,8 +4,8 @@ import {
   useCodefetchFilters,
   COMMON_EXTENSIONS,
   TOKEN_PRESETS,
-  FILTER_PRESETS,
 } from '~/lib/stores/codefetch-filters.store';
+import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import type { TokenEncoder } from 'codefetch-sdk';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Label } from '~/components/ui/label';
@@ -23,8 +23,15 @@ import { ScrollArea } from '~/components/ui/scroll-area';
 import { Badge } from '~/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '~/components/ui/dropdown-menu';
+import {
   FileCode,
-  Hash,
   Filter,
   FolderOpen,
   FileText,
@@ -36,17 +43,41 @@ import {
   Eye,
   Download,
   Upload,
+  Settings,
 } from 'lucide-react';
 import { cn } from '~/lib/utils';
 
+/**
+ * CodefetchFilters Component
+ *
+ * Changes made:
+ * - Removed Quick Presets section (not useful)
+ * - Removed Apply Filters button (store syncs in realtime)
+ * - Removed Current Configuration summary
+ * - Moved token settings to Display Options behind gear icon
+ * - Reordered Display Options with Project Tree Depth first
+ */
 export function CodefetchFilters() {
   const filters = useCodefetchFilters();
+  const { dynamicExtensions, scrapedData } = useScrapedDataStore();
   const [newIncludeFile, setNewIncludeFile] = useState('');
   const [newExcludeFile, setNewExcludeFile] = useState('');
   const [newIncludeDir, setNewIncludeDir] = useState('');
   const [newExcludeDir, setNewExcludeDir] = useState('');
+  const [showAllExtensions, setShowAllExtensions] = useState(false);
 
   const hasModified = filters.hasModifiedFilters();
+
+  // Use dynamic extensions if available, otherwise fall back to common extensions
+  const availableExtensions =
+    dynamicExtensions.length > 0 ? dynamicExtensions.map((item) => item.ext) : COMMON_EXTENSIONS;
+
+  // Limit displayed extensions if there are too many
+  const MAX_VISIBLE_EXTENSIONS = 15;
+  const displayedExtensions = showAllExtensions
+    ? availableExtensions
+    : availableExtensions.slice(0, MAX_VISIBLE_EXTENSIONS);
+  const hasMoreExtensions = availableExtensions.length > MAX_VISIBLE_EXTENSIONS;
 
   const handleAddPattern = (
     value: string,
@@ -127,30 +158,6 @@ export function CodefetchFilters() {
     input.click();
   };
 
-  const applyPreset = (presetKey: keyof typeof FILTER_PRESETS) => {
-    const preset = FILTER_PRESETS[presetKey];
-    filters.resetFilters();
-
-    // Apply preset configuration
-    const config = preset.config as any;
-    if (config.extensions) filters.setExtensions(config.extensions);
-    if (config.maxTokens !== undefined) filters.setMaxTokens(config.maxTokens);
-    if (config.tokenLimiter) filters.setTokenLimiter(config.tokenLimiter);
-    if (config.projectTreeDepth !== undefined) filters.setProjectTreeDepth(config.projectTreeDepth);
-    if (config.disableLineNumbers !== undefined)
-      filters.setDisableLineNumbers(config.disableLineNumbers);
-
-    // Add patterns
-    config.includeFiles?.forEach((pattern: string) => filters.addIncludeFile(pattern));
-    config.excludeFiles?.forEach((pattern: string) => filters.addExcludeFile(pattern));
-    config.includeDirs?.forEach((pattern: string) => filters.addIncludeDir(pattern));
-    config.excludeDirs?.forEach((pattern: string) => filters.addExcludeDir(pattern));
-
-    toast.success(`Applied "${preset.name}" preset`, {
-      description: preset.description,
-    });
-  };
-
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -207,36 +214,6 @@ export function CodefetchFilters() {
       {/* Scrollable Content */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-          {/* Presets */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Settings2 className="h-4 w-4" />
-                Quick Presets
-              </CardTitle>
-              <CardDescription>Apply common filter configurations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {Object.entries(FILTER_PRESETS).map(([key, preset]) => (
-                  <Button
-                    key={key}
-                    variant="outline"
-                    className="justify-start h-auto py-2 px-3"
-                    onClick={() => applyPreset(key as keyof typeof FILTER_PRESETS)}
-                  >
-                    <span className="text-left w-full block">
-                      <span className="font-medium block">{preset.name}</span>
-                      <span className="text-xs text-muted-foreground truncate block">
-                        {preset.description}
-                      </span>
-                    </span>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* File Extensions */}
           <Card>
             <CardHeader>
@@ -244,29 +221,69 @@ export function CodefetchFilters() {
                 <FileCode className="h-4 w-4" />
                 File Extensions
               </CardTitle>
-              <CardDescription>Select which file types to include</CardDescription>
+              <CardDescription>
+                {dynamicExtensions.length > 0
+                  ? `Found ${dynamicExtensions.length} file types in the project`
+                  : scrapedData
+                    ? 'No files found in the project'
+                    : 'Select which file types to include'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                {COMMON_EXTENSIONS.map((ext) => (
-                  <label
-                    key={ext}
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
-                  >
-                    <Checkbox
-                      checked={filters.extensions.includes(ext)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          filters.setExtensions([...filters.extensions, ext]);
-                        } else {
-                          filters.setExtensions(filters.extensions.filter((e) => e !== ext));
-                        }
-                      }}
-                    />
-                    <span className="text-sm font-mono">{ext}</span>
-                  </label>
-                ))}
-              </div>
+              {!scrapedData && dynamicExtensions.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  <p>Scrape a project to see file types specific to that codebase</p>
+                </div>
+              )}
+
+              <ScrollArea className="h-[200px] pr-4">
+                <div className="space-y-1">
+                  {displayedExtensions.map((ext, index) => {
+                    const extInfo = dynamicExtensions.find((item) => item.ext === ext);
+                    const fileCount = extInfo?.count;
+
+                    return (
+                      <label
+                        key={ext}
+                        className="flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={filters.extensions.includes(ext)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                filters.setExtensions([...filters.extensions, ext]);
+                              } else {
+                                filters.setExtensions(filters.extensions.filter((e) => e !== ext));
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm font-mono">{ext}</span>
+                        </div>
+                        {fileCount && (
+                          <span className="text-xs text-muted-foreground">
+                            {fileCount} {fileCount === 1 ? 'file' : 'files'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              {hasMoreExtensions && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllExtensions(!showAllExtensions)}
+                  className="w-full"
+                >
+                  {showAllExtensions
+                    ? `Show less`
+                    : `Show ${availableExtensions.length - MAX_VISIBLE_EXTENSIONS} more`}
+                </Button>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="custom-extensions">Custom Extensions</Label>
@@ -280,112 +297,6 @@ export function CodefetchFilters() {
                 <p className="text-xs text-muted-foreground">
                   Add custom file extensions separated by commas
                 </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Token Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Hash className="h-4 w-4" />
-                Token Settings
-              </CardTitle>
-              <CardDescription>Configure token limits and encoding</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Max Tokens */}
-              <div className="space-y-2">
-                <Label>Max Tokens</Label>
-                <Select
-                  value={filters.maxTokens?.toString() || 'null'}
-                  onValueChange={(value) => {
-                    filters.setMaxTokens(value === 'null' ? null : parseInt(value));
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TOKEN_PRESETS.map((preset) => (
-                      <SelectItem key={preset.label} value={preset.value?.toString() || 'null'}>
-                        {preset.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Custom limit"
-                    value={filters.maxTokens || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      filters.setMaxTokens(value ? parseInt(value) : null);
-                    }}
-                    className="flex-1"
-                  />
-                  <span className="text-sm text-muted-foreground">tokens</span>
-                </div>
-              </div>
-
-              {/* Token Encoder */}
-              <div className="space-y-2">
-                <Label>Token Encoder</Label>
-                <Select
-                  value={filters.tokenEncoder}
-                  onValueChange={(value) => filters.setTokenEncoder(value as TokenEncoder)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="simple">simple (All models)</SelectItem>
-                    <SelectItem value="p50k">p50k (Davinci models)</SelectItem>
-                    <SelectItem value="cl100k">cl100k (GPT-4, GPT-3.5)</SelectItem>
-                    <SelectItem value="o200k">o200k (GPT-4o models)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Token Limiter Strategy */}
-              <div className="space-y-2">
-                <Label>Token Limiter Strategy</Label>
-                <div className="space-y-2">
-                  <label className="flex items-start space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="tokenLimiter"
-                      value="truncated"
-                      checked={filters.tokenLimiter === 'truncated'}
-                      onChange={() => filters.setTokenLimiter('truncated')}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <span className="text-sm font-medium">Truncated</span>
-                      <p className="text-xs text-muted-foreground">
-                        Include files until token limit is reached
-                      </p>
-                    </div>
-                  </label>
-                  <label className="flex items-start space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="tokenLimiter"
-                      value="spread"
-                      checked={filters.tokenLimiter === 'spread'}
-                      onChange={() => filters.setTokenLimiter('spread')}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <span className="text-sm font-medium">Spread</span>
-                      <p className="text-xs text-muted-foreground">
-                        Distribute tokens across all files
-                      </p>
-                    </div>
-                  </label>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -602,11 +513,124 @@ export function CodefetchFilters() {
           {/* Display Options */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Eye className="h-4 w-4" />
-                Display Options
-              </CardTitle>
-              <CardDescription>Configure how the output is displayed</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Eye className="h-4 w-4" />
+                    Display Options
+                  </CardTitle>
+                  <CardDescription>Configure how the output is displayed</CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <DropdownMenuLabel>Token Settings</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <div className="p-4 space-y-4">
+                      {/* Max Tokens */}
+                      <div className="space-y-2">
+                        <Label>Max Tokens</Label>
+                        <Select
+                          value={filters.maxTokens?.toString() || 'null'}
+                          onValueChange={(value) => {
+                            filters.setMaxTokens(value === 'null' ? null : parseInt(value));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TOKEN_PRESETS.map((preset) => (
+                              <SelectItem
+                                key={preset.label}
+                                value={preset.value?.toString() || 'null'}
+                              >
+                                {preset.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Custom limit"
+                            value={filters.maxTokens || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              filters.setMaxTokens(value ? parseInt(value) : null);
+                            }}
+                            className="flex-1"
+                          />
+                          <span className="text-sm text-muted-foreground">tokens</span>
+                        </div>
+                      </div>
+
+                      {/* Token Encoder */}
+                      <div className="space-y-2">
+                        <Label>Token Encoder</Label>
+                        <Select
+                          value={filters.tokenEncoder}
+                          onValueChange={(value) => filters.setTokenEncoder(value as TokenEncoder)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="simple">simple (All models)</SelectItem>
+                            <SelectItem value="p50k">p50k (Davinci models)</SelectItem>
+                            <SelectItem value="cl100k">cl100k (GPT-4, GPT-3.5)</SelectItem>
+                            <SelectItem value="o200k">o200k (GPT-4o models)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Token Limiter Strategy */}
+                      <div className="space-y-2">
+                        <Label>Token Limiter Strategy</Label>
+                        <div className="space-y-2">
+                          <label className="flex items-start space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="tokenLimiter"
+                              value="truncated"
+                              checked={filters.tokenLimiter === 'truncated'}
+                              onChange={() => filters.setTokenLimiter('truncated')}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <span className="text-sm font-medium">Truncated</span>
+                              <p className="text-xs text-muted-foreground">
+                                Include files until token limit is reached
+                              </p>
+                            </div>
+                          </label>
+                          <label className="flex items-start space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="tokenLimiter"
+                              value="spread"
+                              checked={filters.tokenLimiter === 'spread'}
+                              onChange={() => filters.setTokenLimiter('spread')}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <span className="text-sm font-medium">Spread</span>
+                              <p className="text-xs text-muted-foreground">
+                                Distribute tokens across all files
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Project Tree Depth */}
@@ -654,74 +678,8 @@ export function CodefetchFilters() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Summary */}
-          <Card className="bg-muted/30">
-            <CardHeader>
-              <CardTitle className="text-sm">Current Configuration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground min-w-[100px]">Extensions:</span>
-                  <span className="font-mono text-xs">
-                    {filters.getAppliedExtensions().join(', ') || 'None selected'}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground min-w-[100px]">Max Tokens:</span>
-                  <span>{filters.maxTokens || 'No limit'}</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground min-w-[100px]">Encoder:</span>
-                  <span>{filters.tokenEncoder}</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground min-w-[100px]">Strategy:</span>
-                  <span>{filters.tokenLimiter}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </ScrollArea>
-
-      {/* Apply Button */}
-      <div className="p-4 border-t bg-background">
-        <Button
-          className="w-full"
-          onClick={() => {
-            // This demonstrates how to use the filters with the codefetch SDK
-            const config = {
-              extensions: filters.getAppliedExtensions(),
-              maxTokens: filters.maxTokens,
-              tokenEncoder: filters.tokenEncoder,
-              tokenLimiter: filters.tokenLimiter,
-              includeFiles: filters.includeFiles.length > 0 ? filters.includeFiles : null,
-              excludeFiles: filters.excludeFiles.length > 0 ? filters.excludeFiles : null,
-              includeDirs: filters.includeDirs.length > 0 ? filters.includeDirs : null,
-              excludeDirs: filters.excludeDirs.length > 0 ? filters.excludeDirs : null,
-              projectTree: filters.projectTreeDepth,
-              disableLineNumbers: filters.disableLineNumbers,
-            };
-
-            console.log('Codefetch SDK Configuration:', config);
-
-            // Show toast notification
-            toast.success('Filters applied successfully!', {
-              description: `${filters.getAppliedExtensions().length} extensions selected, ${filters.maxTokens || 'no'} token limit`,
-            });
-
-            // In a real implementation, you would pass this config to the fetch() function:
-            // const result = await fetch({ source: url, ...config });
-          }}
-        >
-          Apply Filters
-        </Button>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Filters will be applied when fetching code
-        </p>
-      </div>
     </div>
   );
 }

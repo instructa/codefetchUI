@@ -131,17 +131,70 @@ export function filterFileTree(
   // For directories, recursively filter children
   if (node.children) {
     const filteredChildren = node.children
-      .map(child => filterFileTree(child, filters, manualSelections))
+      .map((child) => filterFileTree(child, filters, manualSelections))
       .filter((child): child is FileNode => child !== null);
 
     // Only return directory if it has matching children
     if (filteredChildren.length > 0) {
       return {
         ...node,
-        children: filteredChildren
+        children: filteredChildren,
       };
     }
   }
 
   return null;
+}
+
+// Extract file extension from filename
+function getFileExtension(filename: string): string {
+  const lastDotIndex = filename.lastIndexOf('.');
+  if (lastDotIndex === -1 || lastDotIndex === 0) return '';
+
+  // Handle special cases like .test.ts, .spec.js, etc.
+  const ext = filename.slice(lastDotIndex);
+  const beforeDot = filename.slice(0, lastDotIndex);
+
+  // Check if this might be a compound extension
+  const secondLastDotIndex = beforeDot.lastIndexOf('.');
+  if (secondLastDotIndex !== -1) {
+    const potentialCompound = beforeDot.slice(secondLastDotIndex);
+    // Common compound extensions
+    if (['.test', '.spec', '.e2e', '.integration', '.unit'].includes(potentialCompound)) {
+      return potentialCompound + ext;
+    }
+  }
+
+  return ext;
+}
+
+// Compute unique file extensions and their frequencies from a FileNode tree
+export function computeFileExtensions(node: FileNode): Array<{ ext: string; count: number }> {
+  const extensionMap = new Map<string, number>();
+
+  // Recursive function to traverse the tree
+  function traverse(currentNode: FileNode) {
+    if (currentNode.type === 'file') {
+      const ext = getFileExtension(currentNode.name);
+      if (ext) {
+        extensionMap.set(ext, (extensionMap.get(ext) || 0) + 1);
+      }
+    } else if (currentNode.children) {
+      currentNode.children.forEach(traverse);
+    }
+  }
+
+  traverse(node);
+
+  // Convert map to array and sort by count (descending) then alphabetically
+  const extensions = Array.from(extensionMap.entries())
+    .map(([ext, count]) => ({ ext, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count; // Sort by count descending
+      }
+      return a.ext.localeCompare(b.ext); // Sort alphabetically if counts are equal
+    });
+
+  return extensions;
 }
