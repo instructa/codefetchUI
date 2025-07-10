@@ -74,6 +74,15 @@ export const COMMON_EXTENSIONS = [
   '.rb',
   '.swift',
   '.kt',
+  // Test file extensions
+  '.test.ts',
+  '.test.tsx',
+  '.test.js',
+  '.test.jsx',
+  '.spec.ts',
+  '.spec.tsx',
+  '.spec.js',
+  '.spec.jsx',
 ];
 
 // Token limit presets for different AI models

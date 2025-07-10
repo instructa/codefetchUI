@@ -27,7 +27,91 @@ export function isNaturalLanguagePrompt(prompt: string): boolean {
     /rule:/, // rule syntax
   ];
 
-  return !astGrepPatterns.some((pattern) => pattern.test(prompt));
+  // If it contains ast-grep syntax, it's not natural language
+  if (astGrepPatterns.some((pattern) => pattern.test(prompt))) {
+    return false;
+  }
+
+  // Check if it's a vague query without code-specific terms
+  const codeSpecificTerms = [
+    'function',
+    'class',
+    'method',
+    'variable',
+    'import',
+    'export',
+    'async',
+    'await',
+    'promise',
+    'callback',
+    'component',
+    'hook',
+    'test',
+    'spec',
+    'describe',
+    'it',
+    'expect',
+    'mock',
+    'interface',
+    'type',
+    'enum',
+    'const',
+    'let',
+    'var',
+    'return',
+    'if',
+    'else',
+    'for',
+    'while',
+    'switch',
+    'try',
+    'catch',
+    'throw',
+    'error',
+    'api',
+    'route',
+    'file',
+    'folder',
+    'directory',
+    'module',
+    'package',
+  ];
+
+  const lowerPrompt = prompt.toLowerCase();
+  const hasCodeTerms = codeSpecificTerms.some((term) => lowerPrompt.includes(term));
+
+  // If it's too vague (no code terms), it might need special handling
+  return hasCodeTerms || prompt.length > 20;
+}
+
+// Check if query is too vague for AI transformation
+export function isVagueQuery(prompt: string): boolean {
+  const lowerPrompt = prompt.toLowerCase();
+
+  // List of vague phrases that often cause issues
+  const vaguePatterns = [/^i want to\s/, /^i need to\s/, /^how to\s/, /^show me\s/, /^can you\s/];
+
+  // Check if it starts with a vague pattern but lacks specific code context
+  const startsVague = vaguePatterns.some((pattern) => pattern.test(lowerPrompt));
+
+  const codeSpecificTerms = [
+    'function',
+    'class',
+    'test',
+    'component',
+    'file',
+    'folder',
+    'async',
+    'api',
+    'route',
+    'import',
+    'export',
+    'variable',
+  ];
+
+  const hasSpecificTerms = codeSpecificTerms.some((term) => lowerPrompt.includes(term));
+
+  return startsVague && !hasSpecificTerms;
 }
 
 // Classify prompt intent using keyword matching
@@ -64,11 +148,191 @@ export function setGeminiApiKey(key: string): void {
   localStorage.setItem('geminiApiKey', key);
 }
 
+// Validate ast-grep rule for common issues
+export function validateAstGrepRule(rule: AstGrepRule): { valid: boolean; error?: string } {
+  // Check if pattern exists
+  if (!rule.pattern && !rule.kind) {
+    return { valid: false, error: 'Rule must have either a pattern or kind field' };
+  }
+
+  // Check for newlines in pattern (common cause of MultipleNode errors)
+  if (rule.pattern && rule.pattern.includes('\n')) {
+    return {
+      valid: false,
+      error: 'Pattern contains newlines. Use single-line patterns with metavariables instead.',
+    };
+  }
+
+  // Check for unbalanced braces/parentheses
+  if (rule.pattern) {
+    const openBraces = (rule.pattern.match(/\{/g) || []).length;
+    const closeBraces = (rule.pattern.match(/\}/g) || []).length;
+    const openParens = (rule.pattern.match(/\(/g) || []).length;
+    const closeParens = (rule.pattern.match(/\)/g) || []).length;
+
+    if (openBraces !== closeBraces) {
+      return { valid: false, error: 'Unbalanced braces in pattern' };
+    }
+    if (openParens !== closeParens) {
+      return { valid: false, error: 'Unbalanced parentheses in pattern' };
+    }
+  }
+
+  // Check for valid metavariables
+  if (rule.pattern) {
+    const metavarPattern = /\$[A-Z_]+|\$\$\$/g;
+    const metavars = rule.pattern.match(metavarPattern) || [];
+
+    // Check for incomplete metavariables
+    const incompleteMetavar = /\$[^A-Z_$]/;
+    if (incompleteMetavar.test(rule.pattern)) {
+      return { valid: false, error: 'Invalid metavariable syntax' };
+    }
+  }
+
+  return { valid: true };
+}
+
+// Create a fallback rule for common queries
+export function createFallbackRule(prompt: string): AstGrepRule {
+  const lowerPrompt = prompt.toLowerCase();
+
+  // Directory/file-based searches
+  if (lowerPrompt.includes('test') || lowerPrompt.includes('spec')) {
+    return {
+      pattern: 'test($$$)',
+      languages: ['javascript', 'typescript'],
+    };
+  }
+
+  if (lowerPrompt.includes('component')) {
+    return {
+      pattern: 'function $COMPONENT($$$) { $$$BODY }',
+      languages: ['javascript', 'typescript', 'jsx', 'tsx'],
+    };
+  }
+
+  if (lowerPrompt.includes('async') || lowerPrompt.includes('await')) {
+    return {
+      pattern: 'async function $FUNC($$$) { $$$BODY }',
+      languages: ['javascript', 'typescript'],
+    };
+  }
+
+  // Default: search for the most relevant keyword
+  const keywords = prompt.split(' ').filter((word) => word.length > 3);
+  const keyword = keywords[0] || 'function';
+
+  return {
+    pattern: keyword,
+    languages: ['javascript', 'typescript'],
+  };
+}
+
+// Directory-focused rule templates for common queries
+interface RuleTemplate {
+  keywords: string[];
+  rule: any; // Using any since ast-grep rules can have various structures
+}
+
+export const RULE_TEMPLATES: Record<string, RuleTemplate> = {
+  tests: {
+    keywords: ['test', 'tests', 'testing', 'spec', 'specs', 'jest', 'vitest', 'mocha'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*(test|spec|__test__).*' } },
+          { kind: 'call_expression', pattern: 'test($$$)' },
+          { kind: 'call_expression', pattern: 'describe($$$)' },
+          { kind: 'call_expression', pattern: 'it($$$)' },
+        ],
+      },
+      languages: ['javascript', 'typescript'],
+    },
+  },
+  components: {
+    keywords: ['component', 'components', 'ui', 'widget'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*/components?/.*' } },
+          { pattern: 'function $COMPONENT($$$) { return $$$JSX }' },
+          { pattern: 'const $COMPONENT = ($$$) => { return $$$JSX }' },
+        ],
+      },
+      languages: ['javascript', 'typescript', 'jsx', 'tsx'],
+    },
+  },
+  api: {
+    keywords: ['api', 'endpoint', 'route', 'routes', 'controller'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*/api/.*' } },
+          { path: { regex: '.*/routes?/.*' } },
+          { pattern: 'app.$METHOD($$$)' },
+          { pattern: 'router.$METHOD($$$)' },
+        ],
+      },
+      languages: ['javascript', 'typescript'],
+    },
+  },
+  hooks: {
+    keywords: ['hook', 'hooks', 'use'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*/hooks?/.*' } },
+          { pattern: 'function use$HOOK($$$) { $$$BODY }' },
+          { pattern: 'const use$HOOK = ($$$) => { $$$BODY }' },
+        ],
+      },
+      languages: ['javascript', 'typescript', 'jsx', 'tsx'],
+    },
+  },
+  services: {
+    keywords: ['service', 'services', 'helper', 'util', 'utils'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*/services?/.*' } },
+          { path: { regex: '.*/utils?/.*' } },
+          { path: { regex: '.*/helpers?/.*' } },
+        ],
+      },
+      languages: ['javascript', 'typescript'],
+    },
+  },
+};
+
+// Check if query matches a template
+export function findMatchingTemplate(prompt: string): RuleTemplate | null {
+  const lowerPrompt = prompt.toLowerCase();
+
+  for (const [key, template] of Object.entries(RULE_TEMPLATES)) {
+    if (template.keywords.some((keyword) => lowerPrompt.includes(keyword))) {
+      return template;
+    }
+  }
+
+  return null;
+}
+
 // Transform natural language prompt to ast-grep rule using Gemini
 export async function transformPromptToAstGrepRule(
   prompt: string,
   fileTreeContext?: string
 ): Promise<AiTransformResult> {
+  // First check if we have a matching template
+  const template = findMatchingTemplate(prompt);
+  if (template) {
+    console.log('Using template for query:', prompt);
+    return {
+      rule: template.rule,
+      intent: classifyPromptIntent(prompt),
+    };
+  }
+
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Gemini API key not found. Please add your API key in settings.');
@@ -82,7 +346,12 @@ export async function transformPromptToAstGrepRule(
   const systemPrompt = `You are an expert at converting natural language queries into ast-grep patterns.
 Generate ast-grep rules in YAML format that can search for relevant code structures.
 
-For additions (e.g., new pages), also suggest file paths based on common codebase patterns.
+CRITICAL RULES:
+1. NEVER include newlines (\\n) in patterns - use single-line patterns only
+2. For multi-line patterns, use metavariables like $$$BODY to match blocks
+3. Ensure all patterns are valid and parsable
+4. For searching directories/files, use path-based rules instead of code patterns
+5. Test your output for proper YAML syntax
 
 ${fileTreeContext ? `Current file tree context:\n${fileTreeContext}\n` : ''}
 
@@ -90,21 +359,44 @@ Examples:
 Query: "find all async functions"
 Output:
 \`\`\`yaml
-pattern: |
-  async function $FUNC($$$ARGS) { $$$BODY }
+pattern: async function $FUNC($$$ARGS) { $$$BODY }
+languages: [javascript, typescript]
+\`\`\`
+
+Query: "find test functions" or "i want to run tests"
+Output:
+\`\`\`yaml
+rule:
+  kind: call_expression
+  pattern: test($$$)
+languages: [javascript, typescript]
+\`\`\`
+
+Query: "find test folders" or "where are the tests"
+Output:
+\`\`\`yaml
+rule:
+  path:
+    regex: ".*(test|spec|__test__).*"
 languages: [javascript, typescript]
 \`\`\`
 
 Query: "add a new contact page"
 Output:
 \`\`\`yaml
-pattern: |
-  function ContactPage($$$ARGS) { $$$BODY }
+pattern: function ContactPage($$$ARGS) { $$$BODY }
 languages: [javascript, typescript]
 suggestedPaths:
   - src/pages/contact.tsx
   - src/routes/contact.tsx
 \`\`\`
+
+IMPORTANT: Patterns must be on a single line. Use metavariables for complex matches.
+BAD: pattern: |
+  test($$$ARGS) {
+    $$$BODY
+  }
+GOOD: pattern: test($$$ARGS) { $$$BODY }
 
 Now convert this query: "${prompt}"
 Intent: ${intent}
