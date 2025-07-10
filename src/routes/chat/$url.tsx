@@ -408,10 +408,10 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     }
   };
 
-  // Mobile Layout
-  if (isMobile) {
-    return (
-      <div className="flex flex-col h-screen bg-background relative">
+  return (
+    <>
+      {/* Mobile Layout - Hidden on desktop with CSS */}
+      <div className="flex md:hidden flex-col h-screen bg-background relative">
         {/* Mobile Header */}
         <div className="flex items-center justify-between p-3 border-b bg-background">
           <div className="flex-1 mr-2">
@@ -649,14 +649,11 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           </div>
         </div>
       </div>
-    );
-  }
 
-  // Desktop Layout (original layout)
-  return (
-    <div
-      ref={containerRef}
-      className="w-screen overflow-visible md:px-2 md:pb-2 flex flex-row h-full bg-background"
+      {/* Desktop Layout - Hidden on mobile with CSS */}
+      <div
+        ref={containerRef}
+        className="hidden md:flex w-screen overflow-visible md:px-2 md:pb-2 flex-row h-full bg-background"
       id="block-panel-group"
       data-panel-group=""
       data-panel-group-direction="horizontal"
@@ -1127,5 +1124,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
         </div>
       </div>
     </div>
+    </>
   );
 }

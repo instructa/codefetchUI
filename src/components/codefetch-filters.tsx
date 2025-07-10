@@ -226,10 +226,12 @@ export function CodefetchFilters() {
                     className="justify-start h-auto py-2 px-3"
                     onClick={() => applyPreset(key as keyof typeof FILTER_PRESETS)}
                   >
-                    <div className="text-left">
-                      <div className="font-medium">{preset.name}</div>
-                      <div className="text-xs text-muted-foreground">{preset.description}</div>
-                    </div>
+                    <span className="text-left w-full block">
+                      <span className="font-medium block">{preset.name}</span>
+                      <span className="text-xs text-muted-foreground truncate block">
+                        {preset.description}
+                      </span>
+                    </span>
                   </Button>
                 ))}
               </div>
