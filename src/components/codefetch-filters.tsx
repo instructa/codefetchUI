@@ -6,6 +6,7 @@ import {
   TOKEN_PRESETS,
   FILTER_PRESETS,
 } from '~/lib/stores/codefetch-filters.store';
+import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import type { TokenEncoder } from 'codefetch-sdk';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Label } from '~/components/ui/label';
@@ -41,12 +42,25 @@ import { cn } from '~/lib/utils';
 
 export function CodefetchFilters() {
   const filters = useCodefetchFilters();
+  const { dynamicExtensions, scrapedData } = useScrapedDataStore();
   const [newIncludeFile, setNewIncludeFile] = useState('');
   const [newExcludeFile, setNewExcludeFile] = useState('');
   const [newIncludeDir, setNewIncludeDir] = useState('');
   const [newExcludeDir, setNewExcludeDir] = useState('');
+  const [showAllExtensions, setShowAllExtensions] = useState(false);
 
   const hasModified = filters.hasModifiedFilters();
+
+  // Use dynamic extensions if available, otherwise fall back to common extensions
+  const availableExtensions =
+    dynamicExtensions.length > 0 ? dynamicExtensions.map((item) => item.ext) : COMMON_EXTENSIONS;
+
+  // Limit displayed extensions if there are too many
+  const MAX_VISIBLE_EXTENSIONS = 15;
+  const displayedExtensions = showAllExtensions
+    ? availableExtensions
+    : availableExtensions.slice(0, MAX_VISIBLE_EXTENSIONS);
+  const hasMoreExtensions = availableExtensions.length > MAX_VISIBLE_EXTENSIONS;
 
   const handleAddPattern = (
     value: string,
@@ -244,29 +258,69 @@ export function CodefetchFilters() {
                 <FileCode className="h-4 w-4" />
                 File Extensions
               </CardTitle>
-              <CardDescription>Select which file types to include</CardDescription>
+              <CardDescription>
+                {dynamicExtensions.length > 0
+                  ? `Found ${dynamicExtensions.length} file types in the project`
+                  : scrapedData
+                    ? 'No files found in the project'
+                    : 'Select which file types to include'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                {COMMON_EXTENSIONS.map((ext) => (
-                  <label
-                    key={ext}
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
-                  >
-                    <Checkbox
-                      checked={filters.extensions.includes(ext)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          filters.setExtensions([...filters.extensions, ext]);
-                        } else {
-                          filters.setExtensions(filters.extensions.filter((e) => e !== ext));
-                        }
-                      }}
-                    />
-                    <span className="text-sm font-mono">{ext}</span>
-                  </label>
-                ))}
-              </div>
+              {!scrapedData && dynamicExtensions.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  <p>Scrape a project to see file types specific to that codebase</p>
+                </div>
+              )}
+
+              <ScrollArea className="h-[200px] pr-4">
+                <div className="space-y-1">
+                  {displayedExtensions.map((ext, index) => {
+                    const extInfo = dynamicExtensions.find((item) => item.ext === ext);
+                    const fileCount = extInfo?.count;
+
+                    return (
+                      <label
+                        key={ext}
+                        className="flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={filters.extensions.includes(ext)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                filters.setExtensions([...filters.extensions, ext]);
+                              } else {
+                                filters.setExtensions(filters.extensions.filter((e) => e !== ext));
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm font-mono">{ext}</span>
+                        </div>
+                        {fileCount && (
+                          <span className="text-xs text-muted-foreground">
+                            {fileCount} {fileCount === 1 ? 'file' : 'files'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              {hasMoreExtensions && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllExtensions(!showAllExtensions)}
+                  className="w-full"
+                >
+                  {showAllExtensions
+                    ? `Show less`
+                    : `Show ${availableExtensions.length - MAX_VISIBLE_EXTENSIONS} more`}
+                </Button>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="custom-extensions">Custom Extensions</Label>
