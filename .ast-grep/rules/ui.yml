@@ -1,0 +1,8 @@
+id: react-component
+languages: [typescript, javascript]
+pattern: |
+  function $COMPONENT() { return <div>$BODY</div>; }
+holes:
+  COMPONENT: { kind: identifier }
+metadata:
+  bucket: ui

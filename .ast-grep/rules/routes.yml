@@ -1,0 +1,11 @@
+id: express-route
+languages: [typescript, javascript]
+message: "REST route definition"
+severity: info
+pattern: |
+  router.$METHOD("$ROUTE", $HANDLER)
+holes:
+  METHOD: { regex: "(get|post|put|patch|delete)" }
+  ROUTE:  { kind: string_literal }
+metadata:
+  bucket: api

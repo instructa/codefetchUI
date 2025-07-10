@@ -27,7 +27,8 @@
     "deploy:dev": "bun --watch ./alchemy.run.ts --dev",
     "deploy:prod": "bun ./alchemy.run.ts --stage prod",
     "deploy:destroy": "bun ./alchemy.run.ts --destroy",
-    "deploy:read": "bun ./alchemy.run.ts --read"
+    "deploy:read": "bun ./alchemy.run.ts --read",
+    "context:generate": "tsx scripts/generate-code-context.ts"
   },
   "dependencies": {
     "@better-fetch/fetch": "^1.1.18",
@@ -72,7 +73,9 @@
     "codefetch-sdk": "1.5.7-alpha.0",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.2",
+    "fast-glob": "^3.3.3",
     "framer-motion": "^12.16.0",
+    "js-yaml": "^4.1.0",
     "lucide-react": "^0.513.0",
     "motion": "^12.16.0",
     "next-themes": "^0.4.6",
@@ -97,6 +100,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@ast-grep/napi": "^0.38.7",
     "@cloudflare/workerd-darwin-arm64": "^1.20250705.0",
     "@napi-rs/cli": "^2.18.4",
     "@tailwindcss/postcss": "^4.1.8",
@@ -105,6 +109,7 @@
     "@tanstack/react-router-with-query": "^1.120.20",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.30",
     "@types/pg": "^8.15.4",
     "@types/react": "^19.1.6",

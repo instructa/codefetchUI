@@ -134,9 +134,15 @@ importers:
       drizzle-orm:
         specifier: ^0.44.2
         version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7)
+      fast-glob:
+        specifier: ^3.3.3
+        version: 3.3.3
       framer-motion:
         specifier: ^12.16.0
         version: 12.16.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       lucide-react:
         specifier: ^0.513.0
         version: 0.513.0(react@19.1.0)
@@ -204,6 +210,9 @@ importers:
         specifier: ^5.0.6
         version: 5.0.6(@types/react@19.1.6)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
+      '@ast-grep/napi':
+        specifier: ^0.38.7
+        version: 0.38.7
       '@cloudflare/workerd-darwin-arm64':
         specifier: ^1.20250705.0
         version: 1.20250705.0
@@ -228,6 +237,9 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@9.3.4)(@types/react-dom@19.1.6(@types/react@19.1.6))(@types/react@19.1.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/node':
         specifier: ^22.15.30
         version: 22.15.30
@@ -347,6 +359,64 @@ packages:
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
+
+  '@ast-grep/napi-darwin-arm64@0.38.7':
+    resolution: {integrity: sha512-sOq8FDfiSjBuE7ho99TNI/YR9XdtlxrGSV1wYDL55Lkd283tSymW8jYUbxvNrhBj/Gzg+ZQys4pPnqPXb0yoEA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@ast-grep/napi-darwin-x64@0.38.7':
+    resolution: {integrity: sha512-56BN0l8tuLAngnkqv1Gq1W2hIbN7A2PRKIM66AOjNpWzJ9U1gbrup1LsAlQMThzL/5ia6+q6z47F8fF0Amwo4A==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@ast-grep/napi-linux-arm64-gnu@0.38.7':
+    resolution: {integrity: sha512-rr4fe2C3OYNQq5xN2VCvQBY4C4OeG16SZtMPbUnSitYS7k8BqD+ERt5Ambo10DKGUERdKsp8BUF7/pgKRawD3w==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@ast-grep/napi-linux-arm64-musl@0.38.7':
+    resolution: {integrity: sha512-vXtLRt/ZaYhd6X+jvjZTdhqBsbjHbfelgyir/h4B3ZYi/4RkzBtoC8PWBeejcoHSenn9YsfUdldhM+j/Akdekg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@ast-grep/napi-linux-x64-gnu@0.38.7':
+    resolution: {integrity: sha512-zCkTOYAKkBrh/8Gh0oBgeOZTM7v3pOw/QyMQsWjnDqBJPxyJGnGy/MhTVL5DNVkJAJcejQ3sXcFiITdDr4YueQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@ast-grep/napi-linux-x64-musl@0.38.7':
+    resolution: {integrity: sha512-xethNRmEqkIsqHCC8B/OFX4MhDK4UI1q+Fw1EV8xx5MvgycSneR0p1ITwJhZkJThhXWzhqa9Fl8lgj7WiOG6fg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@ast-grep/napi-win32-arm64-msvc@0.38.7':
+    resolution: {integrity: sha512-REabttG3AtLUxTbxNNu5wEd0mG402qbOHEK3nQfm2F4BPp7D8gl5TBtz9uv/K8xepGSRCfZYCWh4uBV2I2MsIw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@ast-grep/napi-win32-ia32-msvc@0.38.7':
+    resolution: {integrity: sha512-LcoqmXsuPrEWtA2PPKIRJ7j9ClYXKprRHDxJHSaBPXqWKdfK6yAdhEYPIIkenbw+VKif4wbm9nYfwAonqozEPA==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@ast-grep/napi-win32-x64-msvc@0.38.7':
+    resolution: {integrity: sha512-+2lAElwprdDemx2s/bY0RWwwltu17IhoRaXbwqP18NMC0NwqWuWiLDe/d/ywp9XqrSbkU1BwkZqM5dZ1AlErKw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@ast-grep/napi@0.38.7':
+    resolution: {integrity: sha512-4jrp4OZc7yxDdKcZkVLVlJXLjxy26WuMtcaxUpP7475nh85k2jeBWTwt8RmeEBXhr9PvJBbdN8sKHmcsKeXd3A==}
+    engines: {node: '>= 10'}
 
   '@aws-crypto/crc32@3.0.0':
     resolution: {integrity: sha512-IzSgsrxUcsrejQbPVilIKy16kAT52EwB6zSaI+M3xxIhKh5+aldEyvI+z6erM7TCLB2BJsFrtHjp6/4/sr+3dA==}
@@ -3974,6 +4044,9 @@ packages:
 
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
+
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -8937,6 +9010,45 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
     optional: true
+
+  '@ast-grep/napi-darwin-arm64@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-darwin-x64@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-linux-arm64-gnu@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-linux-arm64-musl@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-linux-x64-gnu@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-linux-x64-musl@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-win32-arm64-msvc@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-win32-ia32-msvc@0.38.7':
+    optional: true
+
+  '@ast-grep/napi-win32-x64-msvc@0.38.7':
+    optional: true
+
+  '@ast-grep/napi@0.38.7':
+    optionalDependencies:
+      '@ast-grep/napi-darwin-arm64': 0.38.7
+      '@ast-grep/napi-darwin-x64': 0.38.7
+      '@ast-grep/napi-linux-arm64-gnu': 0.38.7
+      '@ast-grep/napi-linux-arm64-musl': 0.38.7
+      '@ast-grep/napi-linux-x64-gnu': 0.38.7
+      '@ast-grep/napi-linux-x64-musl': 0.38.7
+      '@ast-grep/napi-win32-arm64-msvc': 0.38.7
+      '@ast-grep/napi-win32-ia32-msvc': 0.38.7
+      '@ast-grep/napi-win32-x64-msvc': 0.38.7
 
   '@aws-crypto/crc32@3.0.0':
     dependencies:
@@ -14150,6 +14262,8 @@ snapshots:
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
+
+  '@types/js-yaml@4.0.9': {}
 
   '@types/json-schema@7.0.15': {}
 
