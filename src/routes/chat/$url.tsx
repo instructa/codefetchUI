@@ -16,6 +16,11 @@ import {
   Download,
   Copy,
   Check,
+  Filter,
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
+  Menu,
 } from 'lucide-react';
 import { isUrl } from '~/utils/is-url';
 import { Skeleton } from '~/components/ui/skeleton';
@@ -42,6 +47,42 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '~/components/ui/sheet';
+
+// Custom hook to detect mobile viewport
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => {
+    // Initial check for SSR safety
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Check on mount (in case SSR initial state was wrong)
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
 
 export const Route = createFileRoute({
   component: ChatRoute,
@@ -122,6 +163,7 @@ function ChatRoute() {
 }
 
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
+  const isMobile = useIsMobile();
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('filters');
@@ -134,7 +176,17 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     unchecked: Set<string>;
   }>({ checked: new Set(), unchecked: new Set() });
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true); // For mobile
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false); // For mobile filter sheet
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset mobile states when switching between mobile and desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setIsFileTreeCollapsed(true);
+      setIsFilterSheetOpen(false);
+    }
+  }, [isMobile]);
 
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
     useScrapedDataStore();
@@ -356,6 +408,233 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     }
   };
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-full bg-background">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between p-3 border-b bg-background">
+          <div className="flex-1 mr-2">
+            <h1 className="text-sm font-medium truncate">{metadata?.title || 'Codefetch'}</h1>
+            <p className="text-xs text-muted-foreground truncate">{url}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Filter Button */}
+            <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Filters</SheetTitle>
+                  <SheetDescription>
+                    Configure file filters for the codebase
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-4">
+                  <CodefetchFilters />
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Actions Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCopyToClipboard} disabled={!previewMarkdown}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {copiedToClipboard ? 'Copied!' : 'Copy Markdown'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadMarkdown} disabled={!previewMarkdown}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download as MD
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadXML} disabled={!previewMarkdown}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download as XML
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Mobile Content Area */}
+        <div className="flex-1 overflow-hidden">
+          <Tabs value={activeRightTab} onValueChange={setActiveRightTab} className="h-full flex flex-col">
+            <TabsContent value="code" className="flex-1 m-0 overflow-hidden">
+              <div className="h-full flex flex-col">
+                {/* Collapsible File Tree Header */}
+                {scrapedData && (
+                  <button
+                    onClick={() => setIsFileTreeCollapsed(!isFileTreeCollapsed)}
+                    className="flex items-center justify-between p-3 border-b bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileCode className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {activeFileId ? getFileByPath(activeFileId)?.name : 'Select a file'}
+                      </span>
+                    </div>
+                    {isFileTreeCollapsed ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronUp className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+
+                {/* File Tree (Collapsible) */}
+                {!isFileTreeCollapsed && (
+                  <div className="border-b max-h-[50vh] overflow-y-auto">
+                    {isLoading ? (
+                      <div className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm">Scraping content...</span>
+                          </div>
+                          <Progress value={progress * 100} className="h-1.5" />
+                        </div>
+                      </div>
+                    ) : error ? (
+                      <div className="p-4">
+                        <div className="flex flex-col items-center text-center">
+                          <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+                          <p className="text-sm font-medium">Scraping Failed</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-3"
+                            onClick={() => {
+                              hasStartedScraping.current = false;
+                              startScraping();
+                            }}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Retry
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <SimpleFileTree
+                        data={scrapedData?.root}
+                        onFileSelect={(file) => {
+                          handleFileOpen(file);
+                          setIsFileTreeCollapsed(true);
+                        }}
+                        selectedPath={activeFileId || undefined}
+                        onManualSelectionsChange={setManualSelections}
+                        initialManualSelections={manualSelections}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Code Content */}
+                <div className="flex-1 overflow-y-auto">
+                  {activeFileId ? (
+                    (() => {
+                      const file = getFileByPath(activeFileId);
+                      if (!file) return null;
+
+                      return (
+                        <div className="p-4">
+                          <div className="mb-3">
+                            <h2 className="text-lg font-semibold">{file.name}</h2>
+                            <p className="text-xs text-muted-foreground">{file.path}</p>
+                            <div className="flex gap-2 mt-2">
+                              {file.language && (
+                                <Badge variant="secondary" className="text-xs">{file.language}</Badge>
+                              )}
+                              {file.size && (
+                                <Badge variant="outline" className="text-xs">
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          {file.content ? (
+                            <pre className="p-3 bg-muted/50 rounded-md overflow-auto text-xs">
+                              <code>{file.content}</code>
+                            </pre>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                              No content available for this file.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                      <FolderOpen className="w-12 h-12 mb-3 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Tap the file selector above to choose a file
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preview" className="flex-1 m-0 overflow-hidden">
+              <div className="h-full overflow-y-auto">
+                <div className="p-4">
+                  {/* Prompt Selector */}
+                  <div className="mb-4">
+                    <Select value={selectedPrompt} onValueChange={setSelectedPrompt}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Add prompt" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No prompt</SelectItem>
+                        <SelectItem value="codegen">Code Generation</SelectItem>
+                        <SelectItem value="fix">Fix Issues</SelectItem>
+                        <SelectItem value="improve">Improve Code</SelectItem>
+                        <SelectItem value="testgen">Generate Tests</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Card className="shadow-none border-0">
+                    <CardHeader className="px-0 pt-0">
+                      <CardTitle className="text-base">Markdown Preview</CardTitle>
+                      <CardDescription className="text-xs">
+                        Filtered content from {metadata?.title || url}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-0">
+                      <MarkdownPreview content={previewMarkdown} />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Bottom Tab Navigation */}
+            <TabsList className="grid w-full grid-cols-2 h-14 rounded-none border-t bg-background">
+              <TabsTrigger value="code" className="h-full rounded-none data-[state=active]:bg-muted">
+                <FileCode className="w-4 h-4 mr-2" />
+                Code
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="h-full rounded-none data-[state=active]:bg-muted">
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop Layout (original layout)
   return (
     <div
       ref={containerRef}
