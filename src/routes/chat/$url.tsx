@@ -98,13 +98,7 @@ function useIsMobile() {
 
   return isMobile;
 }
-import { searchFiles } from '~/lib/stores/scraped-data.store';
-import type {
-  GrepResult,
-  GrepMetadata,
-  GrepMatch,
-  GrepSummary,
-} from '~/hooks/use-interactive-grep';
+
 import { decodeUrlFromRoute } from '~/utils/url-encoding';
 
 export const Route = createFileRoute('/chat/$url')({
