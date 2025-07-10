@@ -340,10 +340,18 @@ function SimpleFileTreeNode({
     return (
       <Collapsible open={isExpanded}>
         <CollapsibleTrigger asChild>
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={handleToggle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggle();
+              }
+            }}
             className={cn(
-              'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm',
+              'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm cursor-pointer',
               isSelected && 'bg-accent text-accent-foreground',
               !checkedChildrenCount && 'opacity-70'
             )}
@@ -371,7 +379,7 @@ function SimpleFileTreeNode({
                 ({checkedChildrenCount})
               </span>
             )}
-          </button>
+          </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
           {node.children?.map((child, index) => (
@@ -397,10 +405,18 @@ function SimpleFileTreeNode({
   // File node
   const FileIcon = getFileIcon(node.name);
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleToggle();
+        }
+      }}
       className={cn(
-        'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm transition-opacity',
+        'flex items-center gap-1.5 w-full hover:bg-accent hover:text-accent-foreground py-1 px-2 text-sm transition-opacity cursor-pointer',
         isSelected && 'bg-accent text-accent-foreground',
         !checkboxState && 'opacity-70'
       )}
@@ -414,7 +430,7 @@ function SimpleFileTreeNode({
       />
       <FileIcon className="h-3.5 w-3.5 shrink-0" />
       <span className="truncate">{node.name}</span>
-    </button>
+    </div>
   );
 }
 
