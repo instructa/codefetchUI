@@ -49,11 +49,21 @@ import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
 import { CodeSearchResults } from '~/components/code-search-results';
 import { GeminiApiKeyModal } from '~/components/gemini-api-key-modal';
 import {
-  isNaturalLanguagePrompt,
   getGeminiApiKey,
+  isNaturalLanguagePrompt,
   transformPromptToAstGrepRule,
+  isVagueQuery,
+  validateAstGrepRule,
+  createFallbackRule,
 } from '~/utils/ast-grep-ai';
 import { Settings } from 'lucide-react';
+import { searchFiles } from '~/lib/stores/scraped-data.store';
+import type {
+  GrepResult,
+  GrepMetadata,
+  GrepMatch,
+  GrepSummary,
+} from '~/hooks/use-interactive-grep';
 
 export const Route = createFileRoute('/chat/$url')({
   component: ChatRoute,
@@ -379,11 +389,50 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   };
 
   // Handle code search with AI transformation
+  /**
+   * Handles code search with AI-enhanced natural language processing.
+   *
+   * Query Best Practices:
+   * 1. For best results, use specific code-related terms (e.g., "find test functions", "search async methods")
+   * 2. Vague queries like "i want to run tests" are automatically routed to file search
+   * 3. You can use direct ast-grep syntax for precise searches (e.g., "test($$$)")
+   * 4. The AI will transform natural language to ast-grep patterns, but may fallback on errors
+   * 5. Directory searches work well with terms like "test folders", "api routes", "components"
+   *
+   * Examples:
+   * - "find all test files" → searches for files matching test patterns
+   * - "show async functions" → finds async function declarations
+   * - "test($$$)" → direct ast-grep pattern for test calls
+   * - "where are the api endpoints" → searches api directories and route patterns
+   */
   const handleCodeSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!codeSearchQuery.trim()) return;
 
+    // Clear previous results before new search
+    clearCodeSearchResults();
+
     const isNaturalLanguage = isNaturalLanguagePrompt(codeSearchQuery);
+
+    // Check if query is too vague and handle specially
+    if (isVagueQuery(codeSearchQuery)) {
+      // For vague queries like "i want to run tests", use file search instead
+      if (codeSearchQuery.toLowerCase().includes('test')) {
+        // Transform the vague query into a better ast-grep rule for test files
+        const testSearchRule = {
+          rule: {
+            path: {
+              regex: '.*(test|spec|__test__).*',
+            },
+          },
+          languages: ['javascript', 'typescript'],
+          intent: 'find',
+        };
+
+        await searchCode(JSON.stringify(testSearchRule));
+        return;
+      }
+    }
 
     if (isNaturalLanguage) {
       // Check if API key exists
@@ -394,20 +443,62 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       }
 
       try {
-        // Get file tree context (simplified for now)
-        const fileTreeContext = scrapedData?.root
-          ? JSON.stringify(scrapedData.root, null, 2).slice(0, 500) + '...'
-          : '';
+        // Get better file tree context - include top-level directories
+        let fileTreeContext = '';
+        if (scrapedData?.root) {
+          const topLevelDirs = scrapedData.root.children
+            ?.filter((child) => child.type === 'directory')
+            .map((dir) => dir.name)
+            .slice(0, 20); // Limit to 20 directories
+
+          const hasTestDirs = topLevelDirs?.some((dir) =>
+            /test|spec|__test__/.test(dir.toLowerCase())
+          );
+
+          fileTreeContext = `Top-level directories: ${topLevelDirs?.join(', ') || 'none'}
+Has test directories: ${hasTestDirs ? 'yes' : 'no'}
+Common file patterns: ${
+            scrapedData.root.children
+              ?.filter((child) => child.type === 'file')
+              .map((file) => file.name.split('.').pop())
+              .filter(Boolean)
+              .slice(0, 10)
+              .join(', ') || 'none'
+          }`;
+        }
 
         // Transform prompt to ast-grep rule
         const result = await transformPromptToAstGrepRule(codeSearchQuery, fileTreeContext);
 
-        // Search with the transformed rule
-        await searchCode(JSON.stringify(result));
+        // Validate the generated rule
+        const validation = validateAstGrepRule(result.rule);
+
+        if (!validation.valid) {
+          console.warn('Invalid rule generated:', validation.error);
+
+          // Use fallback rule
+          const fallbackRule = createFallbackRule(codeSearchQuery);
+          await searchCode(
+            JSON.stringify({
+              rule: fallbackRule,
+              intent: result.intent,
+              suggestedPaths: result.suggestedPaths,
+            })
+          );
+        } else {
+          // Search with the transformed rule
+          await searchCode(JSON.stringify(result));
+        }
       } catch (error) {
         console.error('AI transformation failed:', error);
-        // Fallback to basic search
-        await searchCode(codeSearchQuery);
+        // Fallback to basic search with a simple pattern
+        const fallbackRule = createFallbackRule(codeSearchQuery);
+        await searchCode(
+          JSON.stringify({
+            rule: fallbackRule,
+            intent: 'find',
+          })
+        );
       }
     } else {
       // Direct ast-grep syntax, use as-is
@@ -541,7 +632,11 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                   )}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  <CodeSearchResults results={codeSearchResults} isSearching={isSearching} />
+                  <CodeSearchResults
+                    results={codeSearchResults}
+                    isSearching={isSearching}
+                    error={codeSearchError}
+                  />
                 </div>
               </div>
             )}

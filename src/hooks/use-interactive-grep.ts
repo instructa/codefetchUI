@@ -66,6 +66,17 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        // Check for ast-grep panic errors
+        if (
+          (errorData.error && errorData.error.includes('panic')) ||
+          errorData.error.includes('MultipleNode')
+        ) {
+          throw new Error(
+            'Invalid search pattern generated. Try rephrasing your query or use direct ast-grep syntax.'
+          );
+        }
+
         throw new Error(errorData.error || 'Failed to search code');
       }
 
@@ -108,7 +119,21 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
       }
     } catch (err) {
       console.error('Interactive grep error:', err);
-      setError(err instanceof Error ? err.message : 'Search failed');
+
+      // Provide more helpful error messages
+      if (err instanceof Error) {
+        if (err.message.includes('Gemini API key not found')) {
+          setError('Please add your Gemini API key to use AI-enhanced search');
+        } else if (err.message.includes('Invalid search pattern')) {
+          setError(err.message);
+        } else if (err.message.includes('Failed to transform prompt')) {
+          setError('Failed to understand your query. Try using more specific code-related terms.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Search failed');
+      }
     } finally {
       setIsSearching(false);
     }

@@ -16,9 +16,10 @@ import type {
 interface CodeSearchResultsProps {
   results: GrepResult[];
   isSearching: boolean;
+  error?: string | null;
 }
 
-export function CodeSearchResults({ results, isSearching }: CodeSearchResultsProps) {
+export function CodeSearchResults({ results, isSearching, error }: CodeSearchResultsProps) {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
   const metadata = results.find((r) => r.type === 'metadata') as GrepMetadata | undefined;
@@ -69,6 +70,16 @@ export function CodeSearchResults({ results, isSearching }: CodeSearchResultsPro
   }
 
   if (results.length === 0) {
+    if (error) {
+      return (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-destructive font-medium mb-2">Search Error</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </CardContent>
+        </Card>
+      );
+    }
     return null;
   }
 
@@ -207,7 +218,8 @@ export function CodeSearchResults({ results, isSearching }: CodeSearchResultsPro
               No matches found in {summary.totalFiles} files.
               {summary.wasAiTransformed && (
                 <span className="block mt-2 text-sm">
-                  Try rephrasing your query or use direct ast-grep syntax.
+                  Try rephrasing your query or use direct ast-grep syntax like "test($$$)" for test
+                  functions.
                 </span>
               )}
             </p>
