@@ -5,9 +5,8 @@ import {
   COMMON_EXTENSIONS,
   TOKEN_PRESETS,
   FILTER_PRESETS,
-  type TokenEncoder,
-  type TokenLimiter,
 } from '~/lib/stores/codefetch-filters.store';
+import type { TokenEncoder } from 'codefetch-sdk';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Label } from '~/components/ui/label';
 import { Input } from '~/components/ui/input';
@@ -342,10 +341,10 @@ export function CodefetchFilters() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="simple">simple (All models)</SelectItem>
+                    <SelectItem value="p50k">p50k (Davinci models)</SelectItem>
                     <SelectItem value="cl100k">cl100k (GPT-4, GPT-3.5)</SelectItem>
-                    <SelectItem value="p50k">p50k (Older GPT-3)</SelectItem>
-                    <SelectItem value="r50k">r50k (Davinci)</SelectItem>
-                    <SelectItem value="o200k">o200k (Newer OpenAI)</SelectItem>
+                    <SelectItem value="o200k">o200k (GPT-4o models)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
