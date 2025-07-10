@@ -5,13 +5,41 @@
  * Usage:
  *   pnpm context:generate --resource weather --intent api
  */
-import { AstGrep, MatchRecord } from '@ast-grep/napi';
-import fs from 'fs';
-import path from 'path';
+import { parse } from '@ast-grep/napi';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import glob from 'fast-glob';
+import * as yaml from 'js-yaml';
 
 interface Args {
   resource: string;
   intent: string;
+}
+
+interface AstGrepRule {
+  id: string;
+  languages: string[];
+  message?: string;
+  severity?: string;
+  pattern: string;
+  holes?: Record<string, any>;
+  metadata?: {
+    bucket?: string;
+  };
+}
+
+interface RankedMatch {
+  path: string;
+  match: string;
+  range: {
+    start: { line: number };
+    end: { line: number };
+  };
+  metadata?: {
+    bucket?: string;
+  };
+  rule: string;
+  score: number;
 }
 
 function parseArgs(): Args {
@@ -44,9 +72,7 @@ function bucketsForIntent(intent: string): string[] {
   }
 }
 
-type RankedMatch = MatchRecord & { score: number };
-
-function scoreMatch(m: MatchRecord, resource: string, buckets: string[]): number {
+function scoreMatch(m: RankedMatch, resource: string, buckets: string[]): number {
   let score = 0;
   if (m.path.includes(resource)) score += 3;
   if (m.metadata && buckets.includes(m.metadata.bucket as string)) score += 2;
@@ -62,24 +88,133 @@ function bumpDuplicateScores(matches: RankedMatch[]): void {
   });
 }
 
+async function loadRules(rulesDir: string): Promise<AstGrepRule[]> {
+  const rules: AstGrepRule[] = [];
+  try {
+    const ruleFiles = await glob('*.yml', { cwd: rulesDir, absolute: true });
+
+    for (const ruleFile of ruleFiles) {
+      const content = await fs.readFile(ruleFile, 'utf-8');
+      const rule = yaml.load(content) as AstGrepRule;
+      if (rule) {
+        rules.push(rule);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading rules:', error);
+  }
+
+  return rules;
+}
+
+function getLanguageFromFile(filePath: string): string | null {
+  const ext = path.extname(filePath).toLowerCase();
+  const langMap: Record<string, string> = {
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.mjs': 'javascript',
+    '.cjs': 'javascript',
+  };
+  return langMap[ext] || null;
+}
+
+async function processFile(
+  filePath: string,
+  rules: AstGrepRule[],
+  resource: string
+): Promise<RankedMatch[]> {
+  const matches: RankedMatch[] = [];
+
+  try {
+    const content = await fs.readFile(filePath, 'utf-8');
+    const language = getLanguageFromFile(filePath);
+
+    if (!language) return matches;
+
+    // Parse the file content with ast-grep
+    const sg = parse(language, content);
+
+    for (const rule of rules) {
+      if (!rule.languages.includes(language)) continue;
+
+      // Apply pattern with environment variables
+      let pattern = rule.pattern;
+      if (resource) {
+        pattern = pattern.replace(/\$RESOURCE/g, resource);
+      }
+
+      // Find all matches for this rule
+      const root = sg.root();
+      const nodes = root.findAll(pattern);
+
+      for (const node of nodes) {
+        const range = node.range();
+        const match: RankedMatch = {
+          path: filePath,
+          match: node.text(),
+          range: {
+            start: { line: range.start.row },
+            end: { line: range.end.row },
+          },
+          metadata: rule.metadata,
+          rule: rule.id,
+          score: 0,
+        };
+        matches.push(match);
+      }
+    }
+  } catch (error) {
+    console.error(`Error processing file ${filePath}:`, error);
+  }
+
+  return matches;
+}
+
 async function main() {
   const { resource, intent } = parseArgs();
   const buckets = bucketsForIntent(intent);
 
-  const sg = new AstGrep('.');
-  const rawMatches = sg.scan({
-    ruleDirs: ['.ast-grep/rules'],
-    env: { RESOURCE: resource },
-  });
+  // Load all rules from the rules directory
+  const rulesDir = path.join(process.cwd(), '.ast-grep/rules');
+  const rules = await loadRules(rulesDir);
 
-  const ranked: RankedMatch[] = rawMatches.map((m) => ({
-    ...m,
-    score: scoreMatch(m, resource, buckets),
-  }));
+  // Find all source files
+  const sourceFiles = await glob(
+    [
+      'src/**/*.{ts,tsx,js,jsx,mjs,cjs}',
+      'scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}',
+      '!**/node_modules/**',
+      '!**/.git/**',
+      '!**/dist/**',
+      '!**/build/**',
+    ],
+    {
+      cwd: process.cwd(),
+      absolute: true,
+    }
+  );
 
-  bumpDuplicateScores(ranked);
+  // Process all files and collect matches
+  const allMatches: RankedMatch[] = [];
 
-  const sorted = ranked.sort((a, b) => b.score - a.score);
+  for (const file of sourceFiles) {
+    const fileMatches = await processFile(file, rules, resource);
+
+    // Score and add matches
+    fileMatches.forEach((match) => {
+      match.score = scoreMatch(match, resource, buckets);
+      allMatches.push(match);
+    });
+  }
+
+  // Bump scores for duplicates
+  bumpDuplicateScores(allMatches);
+
+  // Sort by score
+  const sorted = allMatches.sort((a, b) => b.score - a.score);
+
   const output = sorted.map((m) => ({
     rule: m.rule,
     file: m.path,
@@ -90,7 +225,7 @@ async function main() {
   }));
 
   const outPath = path.resolve('context.json');
-  fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
+  await fs.writeFile(outPath, JSON.stringify(output, null, 2));
   console.log(JSON.stringify(output, null, 2));
   console.log(`\nContext written to ${outPath}`);
 }

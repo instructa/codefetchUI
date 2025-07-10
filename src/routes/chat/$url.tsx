@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   Sparkles,
+  Search,
 } from 'lucide-react';
 import { Input } from '~/components/ui/input';
 import { useStreamingAstGrep } from '~/hooks/use-streaming-ast-grep';
@@ -45,6 +46,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu';
+import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
+import { CodeSearchResults } from '~/components/code-search-results';
 
 export const Route = createFileRoute({
   component: ChatRoute,
@@ -127,7 +130,7 @@ function ChatRoute() {
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
-  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters'>('filters');
+  const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters' | 'search'>('filters');
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
@@ -139,6 +142,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [contextResource, setContextResource] = useState('');
   const [contextIntent, setContextIntent] = useState<'api' | 'model' | 'ui'>('api');
+  const [codeSearchQuery, setCodeSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -147,6 +151,14 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     error: contextError,
     data: contextData,
   } = useStreamingAstGrep();
+
+  const {
+    searchCode,
+    isSearching,
+    results: codeSearchResults,
+    error: codeSearchError,
+    clearResults: clearCodeSearchResults,
+  } = useInteractiveGrep();
 
   const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
     useScrapedDataStore();
@@ -426,6 +438,18 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
               >
                 <div className="truncate">Filters</div>
               </button>
+              <button
+                className={cn(
+                  'group h-7 max-w-56 select-none whitespace-nowrap rounded-md px-3 text-sm font-medium transition-all',
+                  activeLeftTab === 'search'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'hover:bg-muted/50 bg-transparent text-muted-foreground'
+                )}
+                data-active-tab={activeLeftTab === 'search'}
+                onClick={() => setActiveLeftTab('search')}
+              >
+                <div className="truncate">Code Search</div>
+              </button>
             </div>
           </div>
 
@@ -439,6 +463,42 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
             {activeLeftTab === 'filters' && (
               <div className="flex-1 overflow-hidden">
                 <CodefetchFilters />
+              </div>
+            )}
+            {activeLeftTab === 'search' && (
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="p-4 border-b">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (codeSearchQuery.trim()) {
+                        searchCode(codeSearchQuery);
+                      }
+                    }}
+                    className="flex gap-2"
+                  >
+                    <Input
+                      placeholder="e.g., find all async functions, React components..."
+                      value={codeSearchQuery}
+                      onChange={(e) => setCodeSearchQuery(e.target.value)}
+                      className="flex-1"
+                      disabled={isSearching}
+                    />
+                    <Button type="submit" disabled={!codeSearchQuery.trim() || isSearching}>
+                      {isSearching ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </form>
+                  {codeSearchError && (
+                    <div className="mt-2 text-sm text-destructive">{codeSearchError}</div>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <CodeSearchResults results={codeSearchResults} isSearching={isSearching} />
+                </div>
               </div>
             )}
           </div>
@@ -588,7 +648,10 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                     className="h-8 w-28"
                   />
 
-                  <Select value={contextIntent} onValueChange={(v) => setContextIntent(v as 'api' | 'model' | 'ui')}>
+                  <Select
+                    value={contextIntent}
+                    onValueChange={(v) => setContextIntent(v as 'api' | 'model' | 'ui')}
+                  >
                     <SelectTrigger size="sm" className="h-8 w-24">
                       <SelectValue placeholder="Intent" />
                     </SelectTrigger>
@@ -887,12 +950,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                       </div>
                     )}
 
-                    {contextError && (
-                      <p className="text-destructive">{contextError.message}</p>
-                    )}
+                    {contextError && <p className="text-destructive">{contextError.message}</p>}
 
                     {!isContextLoading && !contextError && contextData && (
-                      <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(contextData, null, 2)}</pre>
+                      <pre className="text-sm whitespace-pre-wrap">
+                        {JSON.stringify(contextData, null, 2)}
+                      </pre>
                     )}
 
                     {!isContextLoading && !contextError && !contextData && (
