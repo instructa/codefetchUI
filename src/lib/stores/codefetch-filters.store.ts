@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { TokenEncoder } from 'codefetch-sdk';
 
-export type TokenEncoder = 'cl100k' | 'p50k' | 'r50k' | 'o200k';
 export type TokenLimiter = 'truncated' | 'spread';
 
 interface CodefetchFilters {

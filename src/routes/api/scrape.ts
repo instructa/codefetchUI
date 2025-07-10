@@ -1,5 +1,5 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
-import { fetch as codefetchFetch, type FetchResultImpl } from 'codefetch-sdk';
+import { fetch as codefetchFetch, type FetchResultImpl } from 'codefetch-sdk/server';
 import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
 
