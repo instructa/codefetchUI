@@ -93,7 +93,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   return (
-    <html lang="en" className={initial === 'system' ? '' : initial}>
+    <html lang="en" className={initial === 'system' ? '' : initial} suppressHydrationWarning>
       <head>
         {/* Early theme application – prevents FOUC without react/no-danger noise */}
         <ThemeInitScript />
