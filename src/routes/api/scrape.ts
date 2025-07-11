@@ -67,10 +67,14 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // In Cloudflare Workers, always disable filesystem cache
       const isWorkerEnvironment = (context as any)?.cloudflare?.env;
 
+      // Get GitHub token from environment if available
+      const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+
       const codefetch = (await codefetchFetch({
         source: targetUrl,
         format: 'json',
         noCache: isWorkerEnvironment ? true : undefined,
+        ...(githubToken && { githubToken }),
       } as any)) as FetchResultImpl;
 
       // Check if result is valid
