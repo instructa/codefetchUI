@@ -33,7 +33,7 @@ export interface GrepSuggestion {
 export type GrepResult = GrepMatch | GrepMetadata | GrepSummary | GrepSuggestion;
 
 interface UseInteractiveGrepReturn {
-  searchCode: (prompt: string) => Promise<void>;
+  searchCode: (prompt: string, repoUrl?: string) => Promise<void>;
   isSearching: boolean;
   results: GrepResult[];
   error: string | null;
@@ -50,7 +50,7 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
     setError(null);
   }, []);
 
-  const searchCode = useCallback(async (prompt: string) => {
+  const searchCode = useCallback(async (prompt: string, repoUrl?: string) => {
     setIsSearching(true);
     setError(null);
     setResults([]);
@@ -61,7 +61,7 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, repoUrl }),
       });
 
       if (!response.ok) {

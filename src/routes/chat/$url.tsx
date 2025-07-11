@@ -506,7 +506,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           intent: 'find',
         };
 
-        await searchCode(JSON.stringify(testSearchRule));
+        await searchCode(JSON.stringify(testSearchRule), url);
         return;
       }
     }
@@ -560,11 +560,12 @@ Common file patterns: ${
               rule: fallbackRule,
               intent: result.intent,
               suggestedPaths: result.suggestedPaths,
-            })
+            }),
+            url
           );
         } else {
           // Search with the transformed rule
-          await searchCode(JSON.stringify(result));
+          await searchCode(JSON.stringify(result), url);
         }
       } catch (error) {
         console.error('AI transformation failed:', error);
@@ -574,12 +575,13 @@ Common file patterns: ${
           JSON.stringify({
             rule: fallbackRule,
             intent: 'find',
-          })
+          }),
+          url
         );
       }
     } else {
       // Direct ast-grep syntax, use as-is
-      await searchCode(codeSearchQuery);
+      await searchCode(codeSearchQuery, url);
     }
   };
 
