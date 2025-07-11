@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export interface GrepMatch {
   type: 'match';
@@ -44,6 +44,7 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<GrepResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const cache = useRef(new Map<string, GrepResult[]>());
 
   const clearResults = useCallback(() => {
     setResults([]);
@@ -51,6 +52,13 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
   }, []);
 
   const searchCode = useCallback(async (prompt: string, repoUrl?: string) => {
+    const key = `${repoUrl || ''}_${prompt}`;
+    if (cache.current.has(key)) {
+      setResults(cache.current.get(key)!);
+      setIsSearching(false);
+      return;
+    }
+
     setIsSearching(true);
     setError(null);
     setResults([]);
@@ -87,6 +95,7 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      const localResults: GrepResult[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -100,7 +109,7 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
           if (line.trim()) {
             try {
               const data = JSON.parse(line) as GrepResult;
-              setResults((prev) => [...prev, data]);
+              localResults.push(data);
             } catch (e) {
               console.error('Failed to parse line:', line, e);
             }
@@ -112,11 +121,14 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
       if (buffer.trim()) {
         try {
           const data = JSON.parse(buffer) as GrepResult;
-          setResults((prev) => [...prev, data]);
+          localResults.push(data);
         } catch (e) {
           console.error('Failed to parse final buffer:', buffer, e);
         }
       }
+
+      setResults(localResults);
+      cache.current.set(key, localResults);
     } catch (err) {
       console.error('Interactive grep error:', err);
 
@@ -128,6 +140,8 @@ export function useInteractiveGrep(): UseInteractiveGrepReturn {
           setError(err.message);
         } else if (err.message.includes('Failed to transform prompt')) {
           setError('Failed to understand your query. Try using more specific code-related terms.');
+        } else if (err.message.includes('Repository data not found')) {
+          setError('Repository not found. Please scrape the repository first.');
         } else {
           setError(err.message);
         }

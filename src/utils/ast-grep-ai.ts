@@ -1,11 +1,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Types for ast-grep AI functionality
-export interface AstGrepRule {
+// Update the AstGrepRule interface to a union type for better handling of simple and complex rules
+export type SimpleRule = {
   pattern: string;
   languages?: string[];
   kind?: string;
-}
+};
+
+export type ComplexRule = {
+  rule: Record<string, any>;
+  languages?: string[];
+};
+
+export type AstGrepRule = SimpleRule | ComplexRule;
 
 export interface AiTransformResult {
   rule: AstGrepRule;
@@ -89,7 +97,17 @@ export function isVagueQuery(prompt: string): boolean {
   const lowerPrompt = prompt.toLowerCase();
 
   // List of vague phrases that often cause issues
-  const vaguePatterns = [/^i want to\s/, /^i need to\s/, /^how to\s/, /^show me\s/, /^can you\s/];
+  const vaguePatterns = [
+    /^i want to\s/,
+    /^i need to\s/,
+    /^how to\s/,
+    /^show me\s/,
+    /^can you\s/,
+    /^find\s+/,
+    /^search for\s+/,
+    /^where\s+/,
+    /^locate\s+/,
+  ];
 
   // Check if it starts with a vague pattern but lacks specific code context
   const startsVague = vaguePatterns.some((pattern) => pattern.test(lowerPrompt));
@@ -148,10 +166,21 @@ export function setGeminiApiKey(key: string): void {
   localStorage.setItem('geminiApiKey', key);
 }
 
+// Add validation function for Gemini API key format after setGeminiApiKey
+// Validates if the provided key matches the expected Gemini API key format
+export function isValidGeminiApiKey(key: string): boolean {
+  return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
+}
+
 // Validate ast-grep rule for common issues
 export function validateAstGrepRule(rule: AstGrepRule): { valid: boolean; error?: string } {
-  // Check if pattern exists
-  if (!rule.pattern && !rule.kind) {
+  if ('rule' in rule) {
+    // Complex rules from templates are assumed valid
+    return { valid: true };
+  }
+
+  // Check for simple rules
+  if (!('pattern' in rule) && !('kind' in rule)) {
     return { valid: false, error: 'Rule must have either a pattern or kind field' };
   }
 
@@ -303,6 +332,41 @@ export const RULE_TEMPLATES: Record<string, RuleTemplate> = {
       languages: ['javascript', 'typescript'],
     },
   },
+  layouts: {
+    keywords: ['layout', 'layouts', 'template', 'templates'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*/layouts?/.*' } },
+          { pattern: 'function Layout($$$) { $$$BODY }' },
+          { pattern: 'const Layout = ($$$) => { return $$$JSX }' },
+        ],
+      },
+      languages: ['javascript', 'typescript', 'jsx', 'tsx'],
+    },
+  },
+  pages: {
+    keywords: ['page', 'pages', 'screen', 'view'],
+    rule: {
+      rule: {
+        any: [
+          { path: { regex: '.*/pages?/.*' } },
+          { pattern: 'function $PAGE($$$) { return $$$JSX }' },
+          { pattern: 'const $PAGE = ($$$) => { return $$$JSX }' },
+        ],
+      },
+      languages: ['javascript', 'typescript', 'jsx', 'tsx'],
+    },
+  },
+  models: {
+    keywords: ['model', 'models', 'schema', 'db', 'database', 'table'],
+    rule: {
+      rule: {
+        any: [{ path: { regex: '.*/models?/.*' } }, { path: { regex: '.*/schema/.*' } }],
+      },
+      languages: ['javascript', 'typescript'],
+    },
+  },
 };
 
 // Check if query matches a template
@@ -318,7 +382,7 @@ export function findMatchingTemplate(prompt: string): RuleTemplate | null {
   return null;
 }
 
-// Transform natural language prompt to ast-grep rule using Gemini
+// Transforms a natural language prompt into an ast-grep rule using templates or Gemini AI, with added validation and fallback for AI-generated rules
 export async function transformPromptToAstGrepRule(
   prompt: string,
   fileTreeContext?: string
@@ -336,6 +400,9 @@ export async function transformPromptToAstGrepRule(
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Gemini API key not found. Please add your API key in settings.');
+  }
+  if (!isValidGeminiApiKey(apiKey)) {
+    throw new Error('Invalid Gemini API key format. Please check your API key.');
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -443,6 +510,16 @@ Respond with ONLY the YAML rule, no additional explanation.`;
       } else if (inPattern && line.startsWith('  ')) {
         rule.pattern += '\n' + line.substring(2); // Remove 2 spaces for indentation
       }
+    }
+
+    // Validate the generated rule
+    const validation = validateAstGrepRule(rule);
+    if (!validation.valid) {
+      console.warn(`AI-generated rule invalid: ${validation.error}. Using fallback.`);
+      return {
+        rule: createFallbackRule(prompt),
+        intent,
+      };
     }
 
     return {

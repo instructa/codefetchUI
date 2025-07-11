@@ -70,6 +70,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '~/components/ui/sheet';
+import { ScrollArea } from '~/components/ui/scroll-area';
+import { MessageSquare } from 'lucide-react';
 
 // Custom hook to detect mobile viewport
 function useIsMobile() {
@@ -202,6 +204,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true); // For mobile
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false); // For mobile filter sheet
+  const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false); // Added for mobile search sheet
   const [tokenCount, setTokenCount] = useState<number | null>(null);
   const [isCountingTokens, setIsCountingTokens] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -219,6 +222,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     if (!isMobile) {
       setIsFileTreeCollapsed(true);
       setIsFilterSheetOpen(false);
+      setIsSearchSheetOpen(false);
     }
   }, [isMobile]);
 
@@ -482,8 +486,19 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
    * - "test($$$)" → direct ast-grep pattern for test calls
    * - "where are the api endpoints" → searches api directories and route patterns
    */
-  const handleCodeSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCodeSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    // Check for stored repo data before searching, fallback to trigger scraping
+    if (!scrapedData?.root) {
+      if (!isLoading) {
+        startScraping();
+      }
+      // TODO: Show user message or toast
+      console.warn('Waiting for scraping to complete');
+      return;
+    }
+
     if (!codeSearchQuery.trim()) return;
 
     // Clear previous results before new search
@@ -962,22 +977,18 @@ Common file patterns: ${
                         )}
                       </Button>
                     </form>
-                    {codeSearchError && (
-                      <div className="mt-2 text-sm text-destructive">{codeSearchError}</div>
-                    )}
                     {codeSearchQuery && isNaturalLanguagePrompt(codeSearchQuery) && (
                       <p className="mt-2 text-xs text-muted-foreground">
                         Using AI to transform your natural language query...
                       </p>
                     )}
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4">
-                    <CodeSearchResults
-                      results={codeSearchResults}
-                      isSearching={isSearching}
-                      error={codeSearchError}
-                    />
-                  </div>
+                  <CodeSearchResults
+                    results={codeSearchResults}
+                    isSearching={isSearching}
+                    error={codeSearchError}
+                    onRetry={handleCodeSearch}
+                  />
                 </div>
               )}
             </div>
@@ -1406,6 +1417,42 @@ Common file patterns: ${
 
         {/* Gemini API Key Modal */}
         <GeminiApiKeyModal open={showApiKeyModal} onOpenChange={setShowApiKeyModal} />
+
+        {/* Mobile Search Sheet */}
+        <Sheet open={isSearchSheetOpen} onOpenChange={setIsSearchSheetOpen}>
+          <SheetContent side="bottom" className="h-[80vh]">
+            <SheetHeader>
+              <SheetTitle>AI-Enhanced Code Search</SheetTitle>
+              <SheetDescription>
+                Search using natural language or ast-grep patterns
+              </SheetDescription>
+            </SheetHeader>
+            <form onSubmit={handleCodeSearch} className="p-4 border-b flex gap-2">
+              <Input
+                placeholder="e.g., find all async functions..."
+                value={codeSearchQuery}
+                onChange={(e) => setCodeSearchQuery(e.target.value)}
+                className="flex-1"
+                disabled={isSearching}
+              />
+              <Button type="submit" disabled={!codeSearchQuery.trim() || isSearching}>
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+            <ScrollArea className="h-full p-4">
+              <CodeSearchResults
+                results={codeSearchResults}
+                isSearching={isSearching}
+                error={codeSearchError}
+                onRetry={handleCodeSearch}
+              />
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
       </div>
     </>
   );
