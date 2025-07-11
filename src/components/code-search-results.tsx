@@ -85,7 +85,7 @@ export function CodeSearchResults({ results, isSearching, error }: CodeSearchRes
 
   return (
     <div className="space-y-4">
-      {metadata && (
+      {/* {metadata && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -110,7 +110,7 @@ export function CodeSearchResults({ results, isSearching, error }: CodeSearchRes
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {suggestions.length > 0 && (
         <Card>
