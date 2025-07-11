@@ -94,6 +94,7 @@
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.8",
     "tsx": "^4.19.4",
+    "unstorage": "^1.16.0",
     "vaul": "^1.1.2",
     "vite": "^6.3.5",
     "zod": "^3.25.56",

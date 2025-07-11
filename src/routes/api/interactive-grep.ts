@@ -1,9 +1,7 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
 import { parse } from '@ast-grep/napi';
-import * as fs from 'fs/promises';
 import * as path from 'path';
-import glob from 'fast-glob';
-import * as yaml from 'js-yaml';
+import { getRepoData } from '~/server/repo-storage';
 
 interface ContextItem {
   file: string;
@@ -26,54 +24,6 @@ interface AiTransformResult {
   suggestedPaths?: string[];
   intent: 'refactor' | 'debug' | 'add' | 'find' | 'other';
 }
-
-const FEW_SHOT_EXAMPLES = `
-You are an expert at converting natural language queries into ast-grep patterns.
-
-Examples:
-Query: "find all async functions"
-Output:
-\`\`\`yaml
-pattern: |
-  async function $FUNC($$$ARGS) { $$$BODY }
-languages: [javascript, typescript]
-\`\`\`
-
-Query: "find all React components"  
-Output:
-\`\`\`yaml
-pattern: |
-  function $COMPONENT($$$ARGS) { 
-    $$$BODY
-    return $JSX
-  }
-languages: [javascript, typescript]
-\`\`\`
-
-Query: "find all useState hooks"
-Output:
-\`\`\`yaml
-pattern: |
-  const [$STATE, $SETTER] = useState($$$)
-languages: [javascript, typescript]
-\`\`\`
-
-Query: "find all API routes"
-Output:
-\`\`\`yaml
-pattern: |
-  router.$METHOD($PATH, $$$)
-languages: [javascript, typescript]
-\`\`\`
-
-Query: "find all class definitions"
-Output:
-\`\`\`yaml
-pattern: |
-  class $CLASS { $$$BODY }
-languages: [javascript, typescript]
-\`\`\`
-`;
 
 async function generateAstGrepRule(prompt: string): Promise<GeneratedRule | null> {
   // Check if the prompt is already an AI-transformed result
@@ -160,41 +110,54 @@ function getLanguageFromFile(filePath: string): string | null {
   return langMap[ext] || null;
 }
 
-async function processFileWithPattern(
-  filePath: string,
+
+async function processRepoFileWithPattern(
+  file: any,
   pattern: string,
-  allowedLanguages?: string[]
+  allowedLanguages?: string[],
+  parentPath: string = ''
 ): Promise<ContextItem[]> {
   const matches: ContextItem[] = [];
 
-  try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const language = getLanguageFromFile(filePath);
+  // Build full path
+  const fullPath = parentPath ? `${parentPath}/${file.name}` : file.name;
 
-    if (!language) return matches;
+  if (file.type === 'file' && file.content) {
+    const language = getLanguageFromFile(file.name);
 
-    // Check if this language is allowed
-    if (allowedLanguages && !allowedLanguages.includes(language)) {
-      return matches;
+    if (language && (!allowedLanguages || allowedLanguages.includes(language))) {
+      try {
+        // Parse the file content with ast-grep
+        const sg = parse(language, file.content);
+        const root = sg.root();
+        const nodes = root.findAll(pattern);
+
+        for (const node of nodes) {
+          const range = node.range();
+          // ast-grep uses 'line' property, not 'row'
+          const match: ContextItem = {
+            file: fullPath,
+            lines: [(range.start as any).line + 1, (range.end as any).line + 1],
+            snippet: node.text(),
+            score: 1,
+          };
+          matches.push(match);
+        }
+      } catch (error) {
+        console.error(`Error processing file ${fullPath}:`, error);
+      }
     }
-
-    // Parse the file content with ast-grep
-    const sg = parse(language, content);
-    const root = sg.root();
-    const nodes = root.findAll(pattern);
-
-    for (const node of nodes) {
-      const range = node.range();
-      const match: ContextItem = {
-        file: filePath,
-        lines: [range.start.row + 1, range.end.row + 1],
-        snippet: node.text(),
-        score: 1,
-      };
-      matches.push(match);
+  } else if (file.type === 'directory' && file.children) {
+    // Recursively process children
+    for (const child of file.children) {
+      const childMatches = await processRepoFileWithPattern(
+        child,
+        pattern,
+        allowedLanguages,
+        fullPath
+      );
+      matches.push(...childMatches);
     }
-  } catch (error) {
-    console.error(`Error processing file ${filePath}:`, error);
   }
 
   return matches;
@@ -204,12 +167,29 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
   POST: async ({ request }) => {
     try {
       const body = await request.json();
-      const { prompt } = body;
+      const { prompt, repoUrl } = body;
 
       if (!prompt || typeof prompt !== 'string') {
         return Response.json(
           { error: 'Invalid request. "prompt" field is required.' },
           { status: 400 }
+        );
+      }
+
+      // Repository URL is required
+      if (!repoUrl || typeof repoUrl !== 'string') {
+        return Response.json(
+          { error: 'Invalid request. "repoUrl" field is required.' },
+          { status: 400 }
+        );
+      }
+
+      // Get stored repository data
+      const repoData = await getRepoData(repoUrl);
+      if (!repoData) {
+        return Response.json(
+          { error: 'Repository data not found. Please fetch the repository first.' },
+          { status: 404 }
         );
       }
 
@@ -234,21 +214,6 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
         );
       }
 
-      // Find all source files
-      const sourceFiles = await glob(
-        [
-          'src/**/*.{ts,tsx,js,jsx,mjs,cjs}',
-          '!**/node_modules/**',
-          '!**/.git/**',
-          '!**/dist/**',
-          '!**/build/**',
-        ],
-        {
-          cwd: process.cwd(),
-          absolute: true,
-        }
-      );
-
       // Create streaming response
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
@@ -268,22 +233,39 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
 
           // Process files and stream results
           let totalMatches = 0;
+          let totalFiles = 0;
 
-          for (const file of sourceFiles) {
-            const matches = await processFileWithPattern(file, rule.pattern, rule.language);
+          // Search through repository data
+          const matches = await processRepoFileWithPattern(
+            repoData.root,
+            rule.pattern,
+            rule.language
+          );
 
-            for (const match of matches) {
-              totalMatches++;
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({
-                    type: 'match',
-                    ...match,
-                  }) + '\n'
-                )
+          for (const match of matches) {
+            totalMatches++;
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  type: 'match',
+                  ...match,
+                }) + '\n'
+              )
+            );
+          }
+
+          // Count total files in repo
+          const countFiles = (node: any): number => {
+            if (node.type === 'file') return 1;
+            if (node.children) {
+              return node.children.reduce(
+                (sum: number, child: any) => sum + countFiles(child),
+                0
               );
             }
-          }
+            return 0;
+          };
+          totalFiles = countFiles(repoData.root);
 
           // If AI suggested paths for additions and no matches found
           if (aiResult?.suggestedPaths && totalMatches === 0 && aiResult.intent === 'add') {
@@ -305,7 +287,7 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
             encoder.encode(
               JSON.stringify({
                 type: 'summary',
-                totalFiles: sourceFiles.length,
+                totalFiles: totalFiles,
                 totalMatches,
                 ...(aiResult && {
                   wasAiTransformed: true,

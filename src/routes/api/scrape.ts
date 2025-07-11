@@ -2,6 +2,7 @@ import { createServerFileRoute } from '@tanstack/react-start/server';
 import { fetch as codefetchFetch, type FetchResultImpl } from 'codefetch-sdk/server';
 import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
+import { storeRepoData } from '~/server/repo-storage';
 
 export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request, context }) => {
@@ -80,6 +81,17 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // Check if result is valid
       if (typeof codefetch === 'string' || !('root' in codefetch)) {
         return Response.json({ error: 'Invalid response from codefetch' }, { status: 500 });
+      }
+
+      // Store the repository data for later searches
+      try {
+        await storeRepoData(targetUrl, {
+          root: codefetch.root,
+          metadata: (codefetch as any).metadata,
+        });
+      } catch (error) {
+        console.error('Failed to store repository data:', error);
+        // Continue even if storage fails
       }
 
       // Create a readable stream that sends data in chunks

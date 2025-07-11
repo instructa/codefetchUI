@@ -197,6 +197,9 @@ importers:
       tsx:
         specifier: ^4.19.4
         version: 4.19.4
+      unstorage:
+        specifier: ^1.16.0
+        version: 1.16.0(aws4fetch@1.0.20)(db0@0.3.2(better-sqlite3@11.10.0)(drizzle-orm@0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7)))(ioredis@5.6.1)
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.1.6(@types/react@19.1.6))(@types/react@19.1.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

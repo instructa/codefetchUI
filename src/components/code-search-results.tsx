@@ -22,6 +22,9 @@ interface CodeSearchResultsProps {
 export function CodeSearchResults({ results, isSearching, error }: CodeSearchResultsProps) {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
+  // Check if we're in development mode
+  const isDevelopment = process.env.NODE_ENV === 'development' || import.meta.env.DEV;
+
   const metadata = results.find((r) => r.type === 'metadata') as GrepMetadata | undefined;
   const matches = results.filter((r) => r.type === 'match') as GrepMatch[];
   const summary = results.find((r) => r.type === 'summary') as GrepSummary | undefined;
@@ -53,7 +56,7 @@ export function CodeSearchResults({ results, isSearching, error }: CodeSearchRes
 
   const getRelativePath = (fullPath: string) => {
     // Remove common project paths
-    return fullPath.replace(/^.*\/projects\/[^/]+\//, '').replace(/^.*\/src\//, 'src/');
+    return fullPath.replace(/^.\//, '');
   };
 
   if (isSearching) {
@@ -85,7 +88,7 @@ export function CodeSearchResults({ results, isSearching, error }: CodeSearchRes
 
   return (
     <div className="space-y-4">
-      {/* {metadata && (
+      {metadata && isDevelopment && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -110,7 +113,7 @@ export function CodeSearchResults({ results, isSearching, error }: CodeSearchRes
             </div>
           </CardContent>
         </Card>
-      )} */}
+      )}
 
       {suggestions.length > 0 && (
         <Card>
