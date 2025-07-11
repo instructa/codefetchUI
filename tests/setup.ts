@@ -2,6 +2,8 @@ import '@testing-library/jest-dom/vitest';
 
 // ensure env vars are loaded before any database import
 import dotenv from 'dotenv';
+// Load .env first, then .env.test can override if needed
+dotenv.config({ path: '.env' });
 dotenv.config({ path: '.env.test' });
 
 // Mock the sendEmail util so no real emails are sent during tests
