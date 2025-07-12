@@ -139,13 +139,15 @@ export function CodeSearchResults({
             <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
               <code>{metadata.rule}</code>
             </pre>
-            <div className="mt-2 flex gap-2">
-              {metadata.languages.map((lang) => (
-                <Badge key={lang} variant="secondary" className="text-xs">
-                  {lang}
-                </Badge>
-              ))}
-            </div>
+            {metadata.languages && metadata.languages.length > 0 && (
+              <div className="mt-2 flex gap-2">
+                {metadata.languages.map((lang) => (
+                  <Badge key={lang} variant="secondary" className="text-xs">
+                    {lang}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

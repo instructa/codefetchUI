@@ -106,45 +106,6 @@ export const usePreviewStore = create<PreviewStore>()(
   }))
 );
 
-// Subscribe to changes in scraped data and filters
-useScrapedDataStore.subscribe(
-  (state) => ({
-    scrapedData: state.scrapedData,
-    manualSelections: state.manualSelections,
-  }),
-  () => {
-    usePreviewStore.getState().regeneratePreview();
-  },
-  {
-    equalityFn: (a, b) =>
-      a.scrapedData === b.scrapedData &&
-      a.manualSelections.checked.size === b.manualSelections.checked.size &&
-      a.manualSelections.unchecked.size === b.manualSelections.unchecked.size &&
-      Array.from(a.manualSelections.checked).every((item) =>
-        b.manualSelections.checked.has(item)
-      ) &&
-      Array.from(a.manualSelections.unchecked).every((item) =>
-        b.manualSelections.unchecked.has(item)
-      ),
-  }
-);
-
-useCodefetchFilters.subscribe(
-  (state) => ({
-    extensions: state.extensions,
-    customExtensions: state.customExtensions,
-    includeFiles: state.includeFiles,
-    excludeFiles: state.excludeFiles,
-    includeDirs: state.includeDirs,
-    excludeDirs: state.excludeDirs,
-    selectedPrompt: state.selectedPrompt,
-    tokenEncoder: state.tokenEncoder,
-  }),
-  () => {
-    usePreviewStore.getState().regeneratePreview();
-  }
-);
-
 // Clean up worker on page unload
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {

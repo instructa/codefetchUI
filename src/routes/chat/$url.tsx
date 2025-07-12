@@ -199,6 +199,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [codeSearchQuery, setCodeSearchQuery] = useState('');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [codeSearchWarning, setCodeSearchWarning] = useState<string | null>(null);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true); // For mobile
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false); // For mobile filter sheet
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false); // Added for mobile search sheet
@@ -422,8 +423,9 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
 
     if (!codeSearchQuery.trim()) return;
 
-    // Clear previous results before new search
+    // Clear previous results and warnings before new search
     clearCodeSearchResults();
+    setCodeSearchWarning(null);
 
     // Always use AI - check API key
     const apiKey = getGeminiApiKey();
@@ -439,34 +441,22 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       // Transform prompt to ast-grep rule using AI
       const result = await transformPromptToAstGrepRule(codeSearchQuery, aiContext);
 
-      // Validate the generated rule
-      const validation = validateAstGrepRule(result.rule);
-
-      if (!validation.valid) {
-        console.warn('Invalid rule generated:', validation.error);
-
-        // Use fallback rule
-        const fallbackRule = createFallbackRule(codeSearchQuery);
-        await searchCode(
-          JSON.stringify({
-            rule: fallbackRule,
-            intent: result.intent,
-            suggestedPaths: result.suggestedPaths,
-          }),
-          url
-        );
-      } else {
-        // Search with the transformed rule
-        await searchCode(JSON.stringify(result), url);
+      // Check if any transformations were applied
+      if (result.rule && 'pattern' in result.rule && result.rule.pattern) {
+        // Check if lowercase metavariables were transformed
+        const originalPattern = codeSearchQuery;
+        if (originalPattern.includes('$') && /\$[a-z]/.test(originalPattern)) {
+          setCodeSearchWarning(
+            'Lowercase metavariables were automatically converted to uppercase for compatibility.'
+          );
+        }
       }
+
+      // Search with the transformed rule
+      await searchCode(JSON.stringify(result), url);
     } catch (error) {
       console.error('AI search failed:', error);
-      // Fallback to direct search if possible
-      try {
-        await searchCode(codeSearchQuery, url);
-      } catch (fallbackError) {
-        console.error('Fallback search also failed:', fallbackError);
-      }
+      // Error will be handled by the hook and displayed in the UI
     }
   };
 
@@ -849,6 +839,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                       <p className="mt-2 text-xs text-muted-foreground">
                         Using AI to enhance your search query...
                       </p>
+                    )}
+                    {codeSearchWarning && (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
+                        <AlertCircle className="h-3 w-3" />
+                        <span>{codeSearchWarning}</span>
+                      </div>
                     )}
                   </div>
                   <CodeSearchResults

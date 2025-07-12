@@ -90,9 +90,12 @@ async function generateAstGrepRule(prompt: string): Promise<GeneratedRule | null
     }
   }
 
-  // Default pattern if no match
+  // Default pattern if no match - extract keywords and search for them
+  const words = lowerPrompt.split(/\s+/).filter((word) => word.length > 2);
+  const keyword = words.find((w) => !['want', 'need', 'find', 'show', 'get'].includes(w)) || 'code';
+
   return {
-    pattern: '$$$ANY',
+    pattern: keyword, // Search for the keyword as a literal string
     language: ['javascript', 'typescript'],
   };
 }
@@ -109,7 +112,6 @@ function getLanguageFromFile(filePath: string): string | null {
   };
   return langMap[ext] || null;
 }
-
 
 async function processRepoFileWithPattern(
   file: any,
@@ -222,7 +224,7 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
           const metadata = {
             type: 'metadata',
             rule: rule.pattern,
-            languages: rule.language,
+            languages: rule.language || ['javascript', 'typescript'], // Ensure languages is always defined
             ...(aiResult && {
               intent: aiResult.intent,
               suggestedPaths: aiResult.suggestedPaths,
@@ -258,10 +260,7 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
           const countFiles = (node: any): number => {
             if (node.type === 'file') return 1;
             if (node.children) {
-              return node.children.reduce(
-                (sum: number, child: any) => sum + countFiles(child),
-                0
-              );
+              return node.children.reduce((sum: number, child: any) => sum + countFiles(child), 0);
             }
             return 0;
           };

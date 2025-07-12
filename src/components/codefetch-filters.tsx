@@ -6,6 +6,7 @@ import {
   TOKEN_PRESETS,
 } from '~/lib/stores/codefetch-filters.store';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
+import { usePreviewGenerator } from '~/hooks/use-preview-generator';
 import type { TokenEncoder } from 'codefetch-sdk';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Label } from '~/components/ui/label';
@@ -56,6 +57,9 @@ import {
  * - Reordered Display Options with Project Tree Depth first
  */
 export function CodefetchFilters() {
+  // Initialize preview generator to connect stores and worker
+  usePreviewGenerator();
+
   const filters = useCodefetchFilters();
   const { dynamicExtensions, scrapedData } = useScrapedDataStore();
   const [newIncludeFile, setNewIncludeFile] = useState('');
