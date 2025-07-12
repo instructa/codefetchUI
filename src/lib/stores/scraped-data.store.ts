@@ -37,6 +37,7 @@ interface ScrapedDataStore {
   expandedPaths: Set<string>;
   urlExpandedPaths: Map<string, Set<string>>; // Store expanded paths per URL
   dynamicExtensions: DynamicExtension[]; // Dynamic extensions from the scraped data
+  manualSelections: { checked: Set<string>; unchecked: Set<string> }; // Manual file selections
   setScrapedData: (data: ScrapedData | null, metadata: ScrapedDataMetadata | null) => void;
   setSelectedFilePath: (path: string | null) => void;
   setSearchQuery: (query: string) => void;
@@ -45,6 +46,7 @@ interface ScrapedDataStore {
   getFileByPath: (path: string) => FileNode | null;
   loadExpandedPathsForUrl: (url: string) => void;
   saveExpandedPathsForUrl: (url: string) => void;
+  setManualSelections: (selections: { checked: Set<string>; unchecked: Set<string> }) => void;
 }
 
 const STORAGE_KEY = 'scraped-data-expanded-paths';
@@ -88,6 +90,7 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
   expandedPaths: new Set<string>(),
   urlExpandedPaths: getStoredExpandedPaths(),
   dynamicExtensions: [],
+  manualSelections: { checked: new Set(), unchecked: new Set() },
 
   setScrapedData: (data, metadata) => {
     const state = get();
@@ -200,6 +203,10 @@ export const useScrapedDataStore = create<ScrapedDataStore>((set, get) => ({
       saveStoredExpandedPaths(newUrlPaths);
       return { urlExpandedPaths: newUrlPaths };
     });
+  },
+
+  setManualSelections: (selections) => {
+    set({ manualSelections: selections });
   },
 }));
 

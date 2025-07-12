@@ -382,6 +382,23 @@ export function findMatchingTemplate(prompt: string): RuleTemplate | null {
   return null;
 }
 
+export async function generateAiContext(scrapedData: any): Promise<string> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) throw new Error('Gemini API key required');
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+  const rawTree = JSON.stringify(scrapedData.root, null, 2).slice(0, 10000); // Limit size
+
+  const prompt = `Summarize this repo file tree for code search context. Include top directories, common patterns, test locations, main languages, frameworks detected. Be concise.
+
+File tree: ${rawTree}`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
+
 // Transforms a natural language prompt into an ast-grep rule using templates or Gemini AI, with added validation and fallback for AI-generated rules
 export async function transformPromptToAstGrepRule(
   prompt: string,
@@ -464,6 +481,8 @@ BAD: pattern: |
     $$$BODY
   }
 GOOD: pattern: test($$$ARGS) { $$$BODY }
+
+If the query is direct ast-grep syntax (e.g., contains $VAR or YAML), validate and use it, but enhance with the provided context if it improves relevance.
 
 Now convert this query: "${prompt}"
 Intent: ${intent}

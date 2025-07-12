@@ -662,6 +662,26 @@ export function CodefetchFilters() {
                 </p>
               </div>
 
+              {/* Prompt Selection */}
+              <div className="space-y-2">
+                <Label>AI Prompt Template</Label>
+                <Select value={filters.selectedPrompt} onValueChange={filters.setSelectedPrompt}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a prompt template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No prompt</SelectItem>
+                    <SelectItem value="codegen">Code Generation</SelectItem>
+                    <SelectItem value="fix">Fix Issues</SelectItem>
+                    <SelectItem value="improve">Improve Code</SelectItem>
+                    <SelectItem value="testgen">Generate Tests</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Prepend an AI prompt template to the markdown output
+                </p>
+              </div>
+
               {/* Line Numbers */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">

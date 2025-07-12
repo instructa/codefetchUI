@@ -59,6 +59,16 @@ export function CodeSearchResults({
     {} as Record<string, GrepMatch[]>
   );
 
+  // Create file list for virtualizer
+  const fileList = Object.entries(matchesByFile);
+
+  // Initialize virtualizer at top level to comply with Rules of Hooks
+  const rowVirtualizer = useVirtualizer({
+    count: fileList.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+  });
+
   const toggleFile = (file: string) => {
     setExpandedFiles((prev) => {
       const next = new Set(prev);
@@ -190,92 +200,76 @@ export function CodeSearchResults({
               ref={parentRef}
               className={`overflow-auto ${isMobile ? 'h-[300px]' : 'h-[400px]'}`}
             >
-              {(() => {
-                const fileList = Object.entries(matchesByFile);
-                const rowVirtualizer = useVirtualizer({
-                  count: fileList.length,
-                  getScrollElement: () => parentRef.current,
-                  estimateSize: () => 60,
-                });
-                return (
-                  <div
-                    style={{
-                      height: `${rowVirtualizer.getTotalSize()}px`,
-                      width: '100%',
-                      position: 'relative',
-                    }}
-                  >
-                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                      const [file, fileMatches] = fileList[virtualRow.index];
-                      const isExpanded = expandedFiles.has(file);
-                      const relativePath = getRelativePath(file);
-                      return (
-                        <div
-                          key={virtualRow.key}
-                          data-index={virtualRow.index}
-                          ref={rowVirtualizer.measureElement}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            transform: `translateY(${virtualRow.start}px)`,
-                          }}
-                        >
-                          <Collapsible
-                            key={file}
-                            open={isExpanded}
-                            onOpenChange={() => toggleFile(file)}
-                          >
-                            <div className="border rounded-lg">
-                              <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors">
-                                <div className="flex items-center gap-2 flex-1">
-                                  {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-mono text-left">
-                                    {relativePath}
-                                  </span>
-                                </div>
-                                <Badge variant="secondary" className="text-xs">
-                                  {fileMatches.length}{' '}
-                                  {fileMatches.length === 1 ? 'match' : 'matches'}
-                                </Badge>
-                              </CollapsibleTrigger>
-
-                              <CollapsibleContent>
-                                <div className="border-t">
-                                  {fileMatches.map((match, idx) => (
-                                    <div
-                                      key={`${match.file}-${match.lines[0]}-${idx}`}
-                                      className={cn(
-                                        'p-3',
-                                        idx < fileMatches.length - 1 && 'border-b'
-                                      )}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <span className="text-xs text-muted-foreground">
-                                          Lines {match.lines[0]}-{match.lines[1]}
-                                        </span>
-                                      </div>
-                                      <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                                        <code>{match.snippet}</code>
-                                      </pre>
-                                    </div>
-                                  ))}
-                                </div>
-                              </CollapsibleContent>
+              <div
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const [file, fileMatches] = fileList[virtualRow.index];
+                  const isExpanded = expandedFiles.has(file);
+                  const relativePath = getRelativePath(file);
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <Collapsible
+                        key={file}
+                        open={isExpanded}
+                        onOpenChange={() => toggleFile(file)}
+                      >
+                        <div className="border rounded-lg">
+                          <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-2 flex-1">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-mono text-left">{relativePath}</span>
                             </div>
-                          </Collapsible>
+                            <Badge variant="secondary" className="text-xs">
+                              {fileMatches.length} {fileMatches.length === 1 ? 'match' : 'matches'}
+                            </Badge>
+                          </CollapsibleTrigger>
+
+                          <CollapsibleContent>
+                            <div className="border-t">
+                              {fileMatches.map((match, idx) => (
+                                <div
+                                  key={`${match.file}-${match.lines[0]}-${idx}`}
+                                  className={cn('p-3', idx < fileMatches.length - 1 && 'border-b')}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs text-muted-foreground">
+                                      Lines {match.lines[0]}-{match.lines[1]}
+                                    </span>
+                                  </div>
+                                  <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                                    <code>{match.snippet}</code>
+                                  </pre>
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+                      </Collapsible>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>

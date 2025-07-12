@@ -22,6 +22,7 @@ import { Badge } from '~/components/ui/badge';
 import { Checkbox } from '~/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
 import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
+import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 
 // Simple pattern matching function for basic glob patterns
 function matchesPattern(filePath: string, pattern: string): boolean {
@@ -438,8 +439,6 @@ interface SimpleFileTreeProps {
   data?: FileNode;
   onFileSelect: (file: { id: string; name: string; path: string }) => void;
   selectedPath?: string;
-  onManualSelectionsChange?: (selections: { checked: Set<string>; unchecked: Set<string> }) => void;
-  initialManualSelections?: { checked: Set<string>; unchecked: Set<string> };
 }
 
 // Helper function to search files
@@ -464,22 +463,13 @@ function searchFiles(node: FileNode, query: string): FileNode[] {
   return results;
 }
 
-export function SimpleFileTree({
-  data,
-  onFileSelect,
-  selectedPath,
-  onManualSelectionsChange,
-  initialManualSelections,
-}: SimpleFileTreeProps) {
+export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileTreeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [manualSelections, setManualSelections] = useState<{
-    checked: Set<string>;
-    unchecked: Set<string>;
-  }>(initialManualSelections || { checked: new Set(), unchecked: new Set() });
   const filters = useCodefetchFilters();
   const [prevFilters, setPrevFilters] = useState(filters);
+  const { manualSelections, setManualSelections } = useScrapedDataStore();
 
   // Reset manual selections when filters change
   useEffect(() => {
@@ -488,19 +478,7 @@ export function SimpleFileTree({
       setManualSelections({ checked: new Set(), unchecked: new Set() });
       setPrevFilters(filters);
     }
-  }, [filters, prevFilters]);
-
-  // Update manual selections when initialManualSelections prop changes
-  useEffect(() => {
-    if (initialManualSelections) {
-      setManualSelections(initialManualSelections);
-    }
-  }, [initialManualSelections]);
-
-  // Notify parent of manual selections
-  useEffect(() => {
-    onManualSelectionsChange?.(manualSelections);
-  }, [manualSelections, onManualSelectionsChange]);
+  }, [filters, prevFilters, setManualSelections]);
 
   // Calculate initial matches for root level
   const rootChildMatches = useMemo(() => {
@@ -590,65 +568,63 @@ export function SimpleFileTree({
   // Handle manual selection changes
   const handleManualSelectionChange = useCallback(
     (path: string, isDirectory: boolean) => {
-      setManualSelections((prev) => {
-        const newChecked = new Set(prev.checked);
-        const newUnchecked = new Set(prev.unchecked);
-        const node = findFileByPath(data, path);
+      const node = findFileByPath(data, path);
+      if (!node) return;
 
-        if (!node) return prev;
+      const newChecked = new Set(manualSelections.checked);
+      const newUnchecked = new Set(manualSelections.unchecked);
 
-        // Toggle current node
-        const wasManuallyChecked = newChecked.has(path);
-        const wasManuallyUnchecked = newUnchecked.has(path);
-        const wasFilterChecked = node.type === 'file' ? fileMatchesFilters(node, filters) : false;
+      // Toggle current node
+      const wasManuallyChecked = newChecked.has(path);
+      const wasManuallyUnchecked = newUnchecked.has(path);
+      const wasFilterChecked = node.type === 'file' ? fileMatchesFilters(node, filters) : false;
 
-        if (wasManuallyChecked) {
-          newChecked.delete(path);
-          if (!wasFilterChecked) {
-            newUnchecked.add(path);
-          }
-        } else if (wasManuallyUnchecked) {
-          newUnchecked.delete(path);
-          if (wasFilterChecked) {
-            // Return to filter state
-          } else {
-            newChecked.add(path);
-          }
+      if (wasManuallyChecked) {
+        newChecked.delete(path);
+        if (!wasFilterChecked) {
+          newUnchecked.add(path);
+        }
+      } else if (wasManuallyUnchecked) {
+        newUnchecked.delete(path);
+        if (wasFilterChecked) {
+          // Return to filter state
         } else {
-          if (wasFilterChecked) {
-            newUnchecked.add(path);
-          } else {
-            newChecked.add(path);
+          newChecked.add(path);
+        }
+      } else {
+        if (wasFilterChecked) {
+          newUnchecked.add(path);
+        } else {
+          newChecked.add(path);
+        }
+      }
+
+      // If directory, cascade to children
+      if (isDirectory && node.children) {
+        // Determine if we should check or uncheck all children
+        const shouldCheck = newChecked.has(path);
+
+        const cascadeToChildren = (n: FileNode) => {
+          if (n.type === 'file') {
+            if (shouldCheck) {
+              newChecked.add(n.path);
+              newUnchecked.delete(n.path);
+            } else {
+              newUnchecked.add(n.path);
+              newChecked.delete(n.path);
+            }
           }
-        }
+          if (n.children) {
+            n.children.forEach((child) => cascadeToChildren(child));
+          }
+        };
 
-        // If directory, cascade to children
-        if (isDirectory && node.children) {
-          // Determine if we should check or uncheck all children
-          const shouldCheck = newChecked.has(path);
+        node.children.forEach((child) => cascadeToChildren(child));
+      }
 
-          const cascadeToChildren = (n: FileNode) => {
-            if (n.type === 'file') {
-              if (shouldCheck) {
-                newChecked.add(n.path);
-                newUnchecked.delete(n.path);
-              } else {
-                newUnchecked.add(n.path);
-                newChecked.delete(n.path);
-              }
-            }
-            if (n.children) {
-              n.children.forEach((child) => cascadeToChildren(child));
-            }
-          };
-
-          node.children.forEach((child) => cascadeToChildren(child));
-        }
-
-        return { checked: newChecked, unchecked: newUnchecked };
-      });
+      setManualSelections({ checked: newChecked, unchecked: newUnchecked });
     },
-    [data, filters]
+    [data, filters, manualSelections, setManualSelections]
   );
 
   // Select all files

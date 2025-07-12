@@ -24,6 +24,9 @@ interface CodefetchFilters {
   projectTreeDepth: number;
   disableLineNumbers: boolean;
 
+  // Prompt selection
+  selectedPrompt: string;
+
   // Actions
   setExtensions: (extensions: string[]) => void;
   setCustomExtensions: (value: string) => void;
@@ -40,6 +43,7 @@ interface CodefetchFilters {
   removeExcludeDir: (pattern: string) => void;
   setProjectTreeDepth: (depth: number) => void;
   setDisableLineNumbers: (disable: boolean) => void;
+  setSelectedPrompt: (prompt: string) => void;
   resetFilters: () => void;
   getAppliedExtensions: () => string[];
   hasModifiedFilters: () => boolean;
@@ -162,6 +166,7 @@ const defaultFilters = {
   excludeDirs: [],
   projectTreeDepth: 2,
   disableLineNumbers: false,
+  selectedPrompt: 'none',
 };
 
 export const useCodefetchFilters = create<CodefetchFilters>()(
@@ -216,6 +221,7 @@ export const useCodefetchFilters = create<CodefetchFilters>()(
           projectTreeDepth: Math.max(0, Math.min(10, depth)),
         }),
       setDisableLineNumbers: (disable) => set({ disableLineNumbers: disable }),
+      setSelectedPrompt: (prompt) => set({ selectedPrompt: prompt }),
 
       resetFilters: () => set(defaultFilters),
 
@@ -241,7 +247,8 @@ export const useCodefetchFilters = create<CodefetchFilters>()(
           state.includeDirs.length > 0 ||
           state.excludeDirs.length > 0 ||
           state.projectTreeDepth !== defaultFilters.projectTreeDepth ||
-          state.disableLineNumbers !== defaultFilters.disableLineNumbers
+          state.disableLineNumbers !== defaultFilters.disableLineNumbers ||
+          state.selectedPrompt !== defaultFilters.selectedPrompt
         );
       },
     }),

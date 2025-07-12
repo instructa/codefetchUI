@@ -28,13 +28,15 @@ import { Input } from '~/components/ui/input';
 import { isUrl } from '~/utils/is-url';
 import { Skeleton } from '~/components/ui/skeleton';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
+import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
+import { usePreviewStore } from '~/lib/stores/preview.store';
+import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
 import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Progress } from '~/components/ui/progress';
 import { Badge } from '~/components/ui/badge';
 import { FetchResultImpl, FileNode, countTokens } from 'codefetch-sdk';
 import prompts from 'codefetch-sdk/prompts';
-import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
 import { filterFileTree } from '~/utils/filter-file-tree';
 import { MarkdownPreview } from '~/components/markdown-preview';
 import {
@@ -50,7 +52,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu';
-import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
 import { CodeSearchResults } from '~/components/code-search-results';
 import { GeminiApiKeyModal } from '~/components/gemini-api-key-modal';
 import {
@@ -60,6 +61,7 @@ import {
   isVagueQuery,
   validateAstGrepRule,
   createFallbackRule,
+  generateAiContext,
 } from '~/utils/ast-grep-ai';
 import { Settings } from 'lucide-react';
 import {
@@ -194,19 +196,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const [activeRightTab, setActiveRightTab] = useState('code');
   const [openFiles, setOpenFiles] = useState<Array<{ id: string; name: string; path: string }>>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
-  const [selectedPrompt, setSelectedPrompt] = useState<string>('none');
-  const [manualSelections, setManualSelections] = useState<{
-    checked: Set<string>;
-    unchecked: Set<string>;
-  }>({ checked: new Set(), unchecked: new Set() });
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [codeSearchQuery, setCodeSearchQuery] = useState('');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true); // For mobile
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false); // For mobile filter sheet
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false); // Added for mobile search sheet
-  const [tokenCount, setTokenCount] = useState<number | null>(null);
-  const [isCountingTokens, setIsCountingTokens] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -217,6 +212,22 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     clearResults: clearCodeSearchResults,
   } = useInteractiveGrep();
 
+  // Get store state and actions
+  const {
+    setScrapedData,
+    selectedFilePath,
+    setSelectedFilePath,
+    getFileByPath,
+    scrapedData,
+    manualSelections,
+    setManualSelections,
+  } = useScrapedDataStore();
+
+  const filters = useCodefetchFilters();
+  const { selectedPrompt, setSelectedPrompt } = useCodefetchFilters();
+
+  const { previewMarkdown, tokenCount, isGenerating } = usePreviewStore();
+
   // Reset mobile states when switching between mobile and desktop
   useEffect(() => {
     if (!isMobile) {
@@ -226,8 +237,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     }
   }, [isMobile]);
 
-  const { setScrapedData, selectedFilePath, setSelectedFilePath, getFileByPath, scrapedData } =
-    useScrapedDataStore();
   const hasSetInitialFilePath = useRef(false);
   const hasStartedScraping = useRef(false);
   const currentUrlRef = useRef(url);
@@ -252,92 +261,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       },
     }
   );
-
-  // Get codefetch filters
-  const filters = useCodefetchFilters();
-
-  // Generate markdown preview from filtered data
-  const previewMarkdown = useMemo(() => {
-    if (!scrapedData?.root) return '';
-
-    // Filter the file tree based on current filters and manual selections
-    const filteredRoot = filterFileTree(scrapedData.root, filters, manualSelections);
-
-    if (!filteredRoot) {
-      return '# No files match the current filters\n\nPlease adjust your filters to see content.';
-    }
-
-    try {
-      // Create FetchResultImpl instance with filtered data
-      const fetchResult = new FetchResultImpl(filteredRoot as FileNode, {
-        totalFiles: 0, // Will be calculated by FetchResultImpl
-        totalSize: 0,
-        totalTokens: 0,
-        fetchedAt: new Date(),
-        source: url,
-      });
-      // Convert to markdown
-      const codebaseMarkdown = fetchResult.toMarkdown();
-
-      // Add selected prompt if not 'none'
-      if (selectedPrompt && selectedPrompt !== 'none') {
-        let promptText = '';
-
-        // Access the prompts directly from the imported object
-        if (prompts && typeof prompts === 'object') {
-          switch (selectedPrompt) {
-            case 'codegen':
-              promptText = prompts.codegen || '';
-              break;
-            case 'fix':
-              promptText = prompts.fix || '';
-              break;
-            case 'improve':
-              promptText = prompts.improve || '';
-              break;
-            case 'testgen':
-              promptText = prompts.testgen || '';
-              break;
-          }
-        }
-
-        if (promptText) {
-          // Replace template variables
-          promptText = promptText.replace('{{CURRENT_CODEBASE}}', codebaseMarkdown);
-          promptText = promptText.replace('{{MESSAGE}}', ''); // Empty for now
-          return promptText;
-        }
-      }
-
-      return codebaseMarkdown;
-    } catch (err) {
-      console.error('Error generating preview:', err);
-      return '# Error generating preview\n\nUnable to generate markdown preview.';
-    }
-  }, [scrapedData, filters, url, metadata, selectedPrompt, manualSelections]);
-
-  // Count tokens when preview markdown or encoder changes
-  useEffect(() => {
-    const countPreviewTokens = async () => {
-      if (!previewMarkdown) {
-        setTokenCount(null);
-        return;
-      }
-
-      setIsCountingTokens(true);
-      try {
-        const count = await countTokens(previewMarkdown, filters.tokenEncoder);
-        setTokenCount(count);
-      } catch (error) {
-        console.error('Failed to count tokens:', error);
-        setTokenCount(null);
-      } finally {
-        setIsCountingTokens(false);
-      }
-    };
-
-    countPreviewTokens();
-  }, [previewMarkdown, filters.tokenEncoder]);
 
   // Start scraping only once per URL
   useEffect(() => {
@@ -471,20 +394,19 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
 
   // Handle code search with AI transformation
   /**
-   * Handles code search with AI-enhanced natural language processing.
+   * Handles code search with AI enhancement for all queries.
    *
-   * Query Best Practices:
-   * 1. For best results, use specific code-related terms (e.g., "find test functions", "search async methods")
-   * 2. Vague queries like "i want to run tests" are automatically routed to file search
-   * 3. You can use direct ast-grep syntax for precise searches (e.g., "test($$$)")
-   * 4. The AI will transform natural language to ast-grep patterns, but may fallback on errors
-   * 5. Directory searches work well with terms like "test folders", "api routes", "components"
+   * All searches now go through AI for context-aware results:
+   * 1. Natural language queries are transformed to ast-grep patterns
+   * 2. Direct ast-grep syntax is validated and enhanced with repo context
+   * 3. AI generates rich context from the repository structure
+   * 4. Fallbacks ensure searches work even if AI fails
    *
    * Examples:
-   * - "find all test files" → searches for files matching test patterns
-   * - "show async functions" → finds async function declarations
-   * - "test($$$)" → direct ast-grep pattern for test calls
-   * - "where are the api endpoints" → searches api directories and route patterns
+   * - "find all test files" → AI generates context-aware test patterns
+   * - "show async functions" → AI finds async function declarations
+   * - "test($$$)" → AI validates and enhances with relevant paths
+   * - "where are the api endpoints" → AI searches based on repo structure
    */
   const handleCodeSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -494,7 +416,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       if (!isLoading) {
         startScraping();
       }
-      // TODO: Show user message or toast
       console.warn('Waiting for scraping to complete');
       return;
     }
@@ -504,99 +425,48 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     // Clear previous results before new search
     clearCodeSearchResults();
 
-    const isNaturalLanguage = isNaturalLanguagePrompt(codeSearchQuery);
-
-    // Check if query is too vague and handle specially
-    if (isVagueQuery(codeSearchQuery)) {
-      // For vague queries like "i want to run tests", use file search instead
-      if (codeSearchQuery.toLowerCase().includes('test')) {
-        // Transform the vague query into a better ast-grep rule for test files
-        const testSearchRule = {
-          rule: {
-            path: {
-              regex: '.*(test|spec|__test__).*',
-            },
-          },
-          languages: ['javascript', 'typescript'],
-          intent: 'find',
-        };
-
-        await searchCode(JSON.stringify(testSearchRule), url);
-        return;
-      }
+    // Always use AI - check API key
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      setShowApiKeyModal(true);
+      return;
     }
 
-    if (isNaturalLanguage) {
-      // Check if API key exists
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        setShowApiKeyModal(true);
-        return;
-      }
+    try {
+      // Generate AI context
+      const aiContext = await generateAiContext(scrapedData);
 
-      try {
-        // Get better file tree context - include top-level directories
-        let fileTreeContext = '';
-        if (scrapedData?.root) {
-          const topLevelDirs = scrapedData.root.children
-            ?.filter((child) => child.type === 'directory')
-            .map((dir) => dir.name)
-            .slice(0, 20); // Limit to 20 directories
+      // Transform prompt to ast-grep rule using AI
+      const result = await transformPromptToAstGrepRule(codeSearchQuery, aiContext);
 
-          const hasTestDirs = topLevelDirs?.some((dir) =>
-            /test|spec|__test__/.test(dir.toLowerCase())
-          );
+      // Validate the generated rule
+      const validation = validateAstGrepRule(result.rule);
 
-          fileTreeContext = `Top-level directories: ${topLevelDirs?.join(', ') || 'none'}
-Has test directories: ${hasTestDirs ? 'yes' : 'no'}
-Common file patterns: ${
-            scrapedData.root.children
-              ?.filter((child) => child.type === 'file')
-              .map((file) => file.name.split('.').pop())
-              .filter(Boolean)
-              .slice(0, 10)
-              .join(', ') || 'none'
-          }`;
-        }
+      if (!validation.valid) {
+        console.warn('Invalid rule generated:', validation.error);
 
-        // Transform prompt to ast-grep rule
-        const result = await transformPromptToAstGrepRule(codeSearchQuery, fileTreeContext);
-
-        // Validate the generated rule
-        const validation = validateAstGrepRule(result.rule);
-
-        if (!validation.valid) {
-          console.warn('Invalid rule generated:', validation.error);
-
-          // Use fallback rule
-          const fallbackRule = createFallbackRule(codeSearchQuery);
-          await searchCode(
-            JSON.stringify({
-              rule: fallbackRule,
-              intent: result.intent,
-              suggestedPaths: result.suggestedPaths,
-            }),
-            url
-          );
-        } else {
-          // Search with the transformed rule
-          await searchCode(JSON.stringify(result), url);
-        }
-      } catch (error) {
-        console.error('AI transformation failed:', error);
-        // Fallback to basic search with a simple pattern
+        // Use fallback rule
         const fallbackRule = createFallbackRule(codeSearchQuery);
         await searchCode(
           JSON.stringify({
             rule: fallbackRule,
-            intent: 'find',
+            intent: result.intent,
+            suggestedPaths: result.suggestedPaths,
           }),
           url
         );
+      } else {
+        // Search with the transformed rule
+        await searchCode(JSON.stringify(result), url);
       }
-    } else {
-      // Direct ast-grep syntax, use as-is
-      await searchCode(codeSearchQuery, url);
+    } catch (error) {
+      console.error('AI search failed:', error);
+      // Fallback to direct search if possible
+      try {
+        await searchCode(codeSearchQuery, url);
+      } catch (fallbackError) {
+        console.error('Fallback search also failed:', fallbackError);
+      }
     }
   };
 
@@ -723,8 +593,6 @@ Common file patterns: ${
                           setIsFileTreeCollapsed(true);
                         }}
                         selectedPath={activeFileId || undefined}
-                        onManualSelectionsChange={setManualSelections}
-                        initialManualSelections={manualSelections}
                       />
                     )}
                   </div>
@@ -810,7 +678,7 @@ Common file patterns: ${
                         {tokenCount !== null && (
                           <div className="text-right">
                             <Badge variant="secondary" className="gap-1">
-                              {isCountingTokens ? (
+                              {isGenerating ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
                                 <Hash className="h-3 w-3" />
@@ -977,9 +845,9 @@ Common file patterns: ${
                         )}
                       </Button>
                     </form>
-                    {codeSearchQuery && isNaturalLanguagePrompt(codeSearchQuery) && (
+                    {codeSearchQuery && (
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Using AI to transform your natural language query...
+                        Using AI to enhance your search query...
                       </p>
                     )}
                   </div>
@@ -1229,8 +1097,6 @@ Common file patterns: ${
                           data={scrapedData?.root}
                           onFileSelect={handleFileOpen}
                           selectedPath={activeFileId || undefined}
-                          onManualSelectionsChange={setManualSelections}
-                          initialManualSelections={manualSelections}
                         />
                       )}
                     </div>
@@ -1389,7 +1255,7 @@ Common file patterns: ${
                             {tokenCount !== null && (
                               <div className="text-right">
                                 <Badge variant="secondary" className="gap-1">
-                                  {isCountingTokens ? (
+                                  {isGenerating ? (
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                   ) : (
                                     <Hash className="h-3 w-3" />
@@ -1424,7 +1290,7 @@ Common file patterns: ${
             <SheetHeader>
               <SheetTitle>AI-Enhanced Code Search</SheetTitle>
               <SheetDescription>
-                Search using natural language or ast-grep patterns
+                All searches are enhanced with AI for better results
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={handleCodeSearch} className="p-4 border-b flex gap-2">
