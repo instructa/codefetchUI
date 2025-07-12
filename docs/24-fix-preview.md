@@ -25,4 +25,4 @@ The preview feature is designed to provide a real-time markdown representation o
 -   [ ] Verify that changing file selections in the file tree updates the "Preview" tab correctly.
 -   [ ] Verify that modifying filters also triggers a preview update.
 -   [ ] Confirm that loading indicators are properly displayed during preview regeneration.
--   [ ] Commit the changes with a descriptive message. 
+-   [x] Commit the changes with a descriptive message. 
