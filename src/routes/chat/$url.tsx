@@ -191,9 +191,6 @@ function ChatRoute() {
 
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const isMobile = useIsMobile();
-  const engineMeta = codeSearchResults.find(
-    (r) => r.type === 'metadata',
-  ) as SearchMetadata | undefined;
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters' | 'search'>('filters');
@@ -216,6 +213,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     error: codeSearchError,
     clearResults: clearCodeSearchResults,
   } = useCodeSearch();
+
+  // Derive engine metadata from the search results (safe after initialization)
+  const engineMeta = useMemo(
+    () => codeSearchResults.find((r) => r.type === 'metadata') as SearchMetadata | undefined,
+    [codeSearchResults]
+  );
 
   // Get store state and actions
   const {

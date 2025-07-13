@@ -1,5 +1,13 @@
 import alchemy from 'alchemy';
-import { R2Bucket, KVNamespace, D1Database, Worker, Queue } from 'alchemy/cloudflare';
+import {
+  R2Bucket,
+  KVNamespace,
+  D1Database,
+  Worker,
+  Queue,
+  DurableObjectNamespace,
+  AiGateway,
+} from 'alchemy/cloudflare';
 // Vectorize might need to be imported separately or might not be available yet
 import { config } from 'dotenv';
 
@@ -88,6 +96,22 @@ const embedQueue = await Queue('embed-queue', {
   adopt: true,
 });
 
+const authDb = await D1Database('auth-db', {
+  name: `codefetch-auth-${app.stage}`,
+  adopt: true,
+});
+
+const aiLimit = await AiGateway('ai-rpm', {
+  rateLimitingInterval: 60, // seconds
+  rateLimitingLimit: 100, // requests per window
+  rateLimitingTechnique: 'sliding',
+});
+
+const quotaDO = new DurableObjectNamespace('QuotaDO', {
+  className: 'QuotaDO',
+  sqlite: true,
+});
+
 // Prepare encrypted secrets for the worker
 const secrets = {
   // Database URL (will need to be transformed for D1 later)
@@ -116,11 +140,13 @@ const secrets = {
 
   // Environment
   NODE_ENV: alchemy.secret(app.stage === 'prod' ? 'production' : 'development'),
+
+  MONTHLY_TOKEN_LIMIT: alchemy.secret(process.env.MONTHLY_TOKEN_LIMIT || '1000000'),
 };
 
 // Create the main worker with correct TanStack Start build output
 const worker = await Worker(`codefetch-ui-${app.stage}`, {
-  entrypoint: './dist/_worker.js/index.js',
+  entrypoint: './dist/_worker.js',
   compatibilityDate: '2024-11-19',
   bindings: {
     // Storage (KV and R2)
@@ -143,6 +169,11 @@ const worker = await Worker(`codefetch-ui-${app.stage}`, {
 
     // Analytics binding
     ANALYTICS: analyticsDb,
+
+    AUTH_DB: authDb,
+    AI_RATELIMIT: aiLimit,
+    QUOTA_DO: quotaDO,
+    AI_GATEWAY_URL: alchemy.secret(process.env.AI_GATEWAY_URL || 'https://gw.example.ai'),
   },
   // Remove routes since we don't have a custom domain
   // The worker will be accessible via workers.dev subdomain

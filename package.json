@@ -123,6 +123,7 @@
     "better-sqlite3": "^11.10.0",
     "class-variance-authority": "^0.7.1",
     "dotenv": "^16.5.0",
+    "miniflare": "^4.20250709.0",
     "oxlint": "^1.0.0",
     "prettier": "^3.5.3",
     "shadcn": "^2.6.1",
