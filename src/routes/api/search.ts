@@ -1,11 +1,7 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
-import { Ai } from '@cloudflare/ai';
-import { Vectorize } from '@cloudflare/vectorize';
 import { chooseEngine, type SearchEngine } from '~/utils/engine-select';
-import { normaliseRule } from '~/utils/pattern-guard';
 import { getRepoData } from '~/server/repo-storage';
 import { parse } from '@ast-grep/napi';
-import { logSearchError } from '~/server/analytics';
 
 interface Match {
   type: 'match';
@@ -13,7 +9,7 @@ interface Match {
   lines?: [number, number];
   snippet: string;
   score: number;
-  origin: 'vector' | 'ast' | 'vector+sg';
+  origin: 'semantic' | 'ast';
 }
 
 interface Metadata {
@@ -28,7 +24,7 @@ interface Summary {
   totalMatches: number;
 }
 
-export const ServerRoute = createServerFileRoute('/api/search').methods({
+export const ServerRoute = createServerFileRoute('/api/search' as any).methods({
   POST: async ({ request, context }) => {
     const { prompt, repoUrl, engine: engineArg } = await request.json();
 
@@ -46,9 +42,7 @@ export const ServerRoute = createServerFileRoute('/api/search').methods({
       const stream = new ReadableStream({
         async start(controller) {
           // Emit metadata first
-          controller.enqueue(
-            encoder.encode(JSON.stringify({ type: 'metadata', engine }) + '\n'),
-          );
+          controller.enqueue(encoder.encode(JSON.stringify({ type: 'metadata', engine }) + '\n'));
 
           const emit = (obj: object) =>
             controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
@@ -56,14 +50,14 @@ export const ServerRoute = createServerFileRoute('/api/search').methods({
           try {
             switch (engine) {
               case 'vector':
-                await vectorSearch(prompt, repoUrl, context, emit);
+              case 'hybrid':
+                await semanticSearch(prompt, repoUrl, context, emit);
                 break;
               case 'ast':
                 await astSearch(prompt, repoUrl, context, emit);
                 break;
-              case 'hybrid':
               default:
-                await hybridSearch(prompt, repoUrl, context, emit);
+                await semanticSearch(prompt, repoUrl, context, emit);
             }
           } catch (err) {
             emit({ type: 'error', message: (err as Error).message });
@@ -83,76 +77,158 @@ export const ServerRoute = createServerFileRoute('/api/search').methods({
   },
 });
 
-/* ---------- Engine Implementations ---------- */
-async function vectorSearch(
+/* ---------- Semantic Search Implementation ---------- */
+async function semanticSearch(
   query: string,
   repoUrl: string,
   context: any,
-  emit: (obj: object) => void,
+  emit: (
+    obj: Match | Summary | { type: 'error'; message: string } | { type: 'warning'; msg: string }
+  ) => void
 ) {
   const env = context.cloudflare?.env;
-  if (!env?.CF_VECTORIZE_INDEX) {
-    throw new Error('Vector index binding missing');
+  if (!env?.AI) {
+    throw new Error('AI binding missing');
   }
 
-  // 1) Embed query
-  const ai = new Ai(env);
-  const [embedding] = await ai.run(env.CF_AI_MODEL, { text: [query] });
+  const repoData = await getRepoData(repoUrl);
+  if (!repoData) throw new Error('Repo not scraped yet');
 
-  // 2) Vector search (top 50)
-  const index = new Vectorize(env.CF_VECTORIZE_INDEX, env);
-  const { matches } = await index.query({
-    topK: 50,
-    vector: embedding,
-    includeMetadata: true,
-  });
+  try {
+    // 1. Generate embedding for the query
+    const queryEmbedding = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+      text: [query],
+    });
+    const queryVector = queryEmbedding.data[0];
 
-  let totalMatches = 0;
-  const seen = new Set<string>();
-  for (const m of matches) {
-    // metadata contains {url, path}
-    if (m.metadata?.url !== repoUrl) continue;
-    const key = m.metadata.path;
-    if (seen.has(key)) continue; // dedupe
-    seen.add(key);
-    totalMatches++;
+    // 2. Collect all files and generate embeddings for them
+    const files: Array<{ path: string; content: string }> = [];
+    const collectFiles = (node: any, parent: string) => {
+      const fullPath = parent ? `${parent}/${node.name}` : node.name;
 
+      if (node.type === 'file' && node.content) {
+        // Only process code files
+        const ext = fullPath.split('.').pop()?.toLowerCase() || '';
+        if (
+          [
+            'ts',
+            'tsx',
+            'js',
+            'jsx',
+            'py',
+            'java',
+            'cpp',
+            'c',
+            'h',
+            'hpp',
+            'cs',
+            'rb',
+            'go',
+            'rs',
+            'php',
+            'swift',
+          ].includes(ext)
+        ) {
+          files.push({ path: fullPath, content: node.content.substring(0, 1000) }); // Limit content size
+        }
+      } else if (node.children) {
+        for (const child of node.children) {
+          collectFiles(child, fullPath);
+        }
+      }
+    };
+    collectFiles(repoData.root, '');
+
+    // 3. Generate embeddings for files (batch process)
+    const fileEmbeddings: Array<{ path: string; vector: number[]; content: string }> = [];
+
+    // Process in batches to avoid overwhelming the AI
+    const batchSize = 10;
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize);
+      const texts = batch.map((f) => f.content);
+
+      const embeddings = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+        text: texts,
+      });
+
+      batch.forEach((file, idx) => {
+        if (embeddings.data[idx]) {
+          fileEmbeddings.push({
+            path: file.path,
+            vector: embeddings.data[idx],
+            content: file.content,
+          });
+        }
+      });
+    }
+
+    // 4. Calculate cosine similarity and find top matches
+    const results = fileEmbeddings
+      .map((file) => ({
+        path: file.path,
+        content: file.content,
+        score: cosineSimilarity(queryVector, file.vector),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20); // Top 20 results
+
+    // 5. Emit results
+    let totalMatches = 0;
+    for (const result of results) {
+      if (result.score > 0.3) {
+        // Threshold for relevance
+        totalMatches++;
+        emit({
+          type: 'match',
+          file: result.path,
+          snippet: result.content.substring(0, 200) + '...',
+          score: result.score,
+          origin: 'semantic',
+        } as Match);
+      }
+    }
+
+    emit({ type: 'summary', totalFiles: files.length, totalMatches } as Summary);
+  } catch (err) {
+    console.error('Semantic search error:', err);
     emit({
-      type: 'match',
-      file: m.metadata.path,
-      snippet: `…`, // snippet deferred until ast‑grep confirm
-      score: m.score,
-      origin: 'vector',
-    } as Match);
+      type: 'warning',
+      msg: 'Semantic search failed. Try using AST search instead.',
+    });
   }
-
-  emit({ type: 'summary', totalFiles: seen.size, totalMatches } as Summary);
 }
 
+/* ---------- AST Search Implementation ---------- */
 async function astSearch(
   prompt: string,
   repoUrl: string,
   context: any,
-  emit: (obj: object) => void,
+  emit: (
+    obj:
+      | Match
+      | Summary
+      | Metadata
+      | { type: 'error'; message: string }
+      | { type: 'warning'; msg: string }
+  ) => void
 ) {
   const repoData = await getRepoData(repoUrl);
   if (!repoData) throw new Error('Repo not scraped yet');
 
   // Normalise rule or derive from prompt
+  const { normaliseRule } = await import('~/utils/pattern-guard');
   const ruleObj = normaliseRule(prompt);
   const pattern = ruleObj.pattern;
   const allowedLangs = ruleObj.languages;
 
-  emit({ type: 'metadata', rule: pattern });
+  emit({ type: 'metadata', engine: 'ast', rule: pattern } as Metadata);
 
   let totalMatches = 0;
   let totalFiles = 0;
 
   // traverse repo tree
-  const processFile = async (
-    node: any,
-    parent: string,
-  ) => {
+  const processFile = async (node: any, parent: string) => {
     const fullPath = parent ? `${parent}/${node.name}` : node.name;
 
     if (node.type === 'file' && node.content) {
@@ -161,8 +237,7 @@ async function astSearch(
       if (allowedLangs && !allowedLangs.includes(lang)) return;
 
       const sg = parse(lang, node.content);
-      sg
-        .root()
+      sg.root()
         .findAll(pattern)
         .forEach((n) => {
           const range: any = n.range();
@@ -187,6 +262,7 @@ async function astSearch(
     const msg = (err as Error).message ?? 'unknown error';
     emit({ type: 'warning', msg: 'ast-grep failed – fallback results shown' });
 
+    const { logSearchError } = await import('~/server/analytics');
     await logSearchError(context.cloudflare?.env, {
       repo: repoUrl,
       engine: 'ast',
@@ -198,82 +274,31 @@ async function astSearch(
   emit({ type: 'summary', totalFiles, totalMatches } as Summary);
 }
 
-async function hybridSearch(
-  prompt: string,
-  repoUrl: string,
-  context: any,
-  emit: (obj: object) => void,
-) {
-  // Phase 1: vector narrow
-  const paths: string[] = [];
-  await vectorSearch(prompt, repoUrl, context, (obj) => {
-    if (obj.type === 'match' && obj.origin === 'vector') {
-      paths.push(obj.file);
-    }
-  });
+// Helper function to calculate cosine similarity
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
 
-  // Phase 2: ast‑grep within narrowed set
-  const repoData = await getRepoData(repoUrl);
-  if (!repoData) throw new Error('Repo not scraped yet');
-
-  const ruleObj = normaliseRule(prompt);
-  const pattern = ruleObj.pattern;
-  const allowedLangs = ruleObj.languages;
-
-  let totalMatches = 0;
-  let totalFiles = paths.length;
-
-  const pathSet = new Set(paths);
-
-  const processFile = async (node: any, parent: string) => {
-    const fullPath = parent ? `${parent}/${node.name}` : node.name;
-
-    if (node.type === 'file' && node.content && pathSet.has(fullPath)) {
-      const lang = getLang(fullPath);
-      if (allowedLangs && !allowedLangs.includes(lang)) return;
-
-      const sg = parse(lang, node.content);
-      sg
-        .root()
-        .findAll(pattern)
-        .forEach((n) => {
-          const range: any = n.range();
-          emit({
-            type: 'match',
-            file: fullPath,
-            lines: [range.start.line + 1, range.end.line + 1],
-            snippet: n.text(),
-            score: 2, // confidence boost
-            origin: 'vector+sg',
-          } as Match);
-          totalMatches++;
-        });
-    } else if (node.children) {
-      for (const child of node.children) await processFile(child, fullPath);
-    }
-  };
-
-  try {
-    await processFile(repoData.root, '');
-  } catch (err) {
-    const msg = (err as Error).message ?? 'unknown error';
-    emit({ type: 'warning', msg: 'ast-grep failed – showing vector results only' });
-
-    await logSearchError(context.cloudflare?.env, {
-      repo: repoUrl,
-      engine: 'hybrid',
-      pattern,
-      error: msg,
-    });
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
   }
 
-  emit({ type: 'summary', totalFiles, totalMatches } as Summary);
+  normA = Math.sqrt(normA);
+  normB = Math.sqrt(normB);
+
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+
+  return dotProduct / (normA * normB);
 }
 
 function getLang(p: string): string {
   const ext = p.split('.').pop()?.toLowerCase() || '';
   if (ext === 'ts' || ext === 'tsx') return 'typescript';
-  if (ext === 'js' || ext === 'jsx' || ext === 'mjs' || ext === 'cjs')
-    return 'javascript';
+  if (ext === 'js' || ext === 'jsx' || ext === 'mjs' || ext === 'cjs') return 'javascript';
   return 'javascript';
 }

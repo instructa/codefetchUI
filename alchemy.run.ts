@@ -1,9 +1,6 @@
 import alchemy from 'alchemy';
-import { R2Bucket, KVNamespace, D1Database, Worker } from 'alchemy/cloudflare';
-// <add imports>
-import { Vectorize } from 'alchemy/cloudflare';
-import { Queue } from 'alchemy/cloudflare';
-// </add>
+import { R2Bucket, KVNamespace, D1Database, Worker, Queue } from 'alchemy/cloudflare';
+// Vectorize might need to be imported separately or might not be available yet
 import { config } from 'dotenv';
 
 // Load environment variables
@@ -85,19 +82,11 @@ const analyticsDb = await D1Database('analytics', {
   adopt: true,
 });
 
-// <add vectorize & queue resources>
-const vectorIndex = await Vectorize('vector-index', {
-  name: `codefetch-index-${app.stage}`,
-  dimensions: 384,           // bge-small‑en output size
-  distanceMetric: 'cosine',
-  adopt: true,
-});
-
+// Queue for background tasks
 const embedQueue = await Queue('embed-queue', {
   name: `codefetch-embed-${app.stage}`,
   adopt: true,
 });
-// </add>
 
 // Prepare encrypted secrets for the worker
 const secrets = {
@@ -127,9 +116,6 @@ const secrets = {
 
   // Environment
   NODE_ENV: alchemy.secret(app.stage === 'prod' ? 'production' : 'development'),
-  // <add CF_AI_MODEL secret>
-  CF_AI_MODEL: alchemy.secret(process.env.CF_AI_MODEL || '@cf/baai/bge-small-en-v1.5'),
-  // </add>
 };
 
 // Create the main worker with correct TanStack Start build output
@@ -149,14 +135,14 @@ const worker = await Worker(`codefetch-ui-${app.stage}`, {
     // Secrets
     ...secrets,
 
-    // Vector search
-    CF_VECTORIZE_INDEX: vectorIndex,
+    // AI binding - this gives access to Workers AI and AutoRAG
+    AI: true,
 
     // Queue binding
     EMBED_QUEUE: embedQueue,
-    // <add analyticsBinding>
+
+    // Analytics binding
     ANALYTICS: analyticsDb,
-    // </add>
   },
   // Remove routes since we don't have a custom domain
   // The worker will be accessible via workers.dev subdomain
