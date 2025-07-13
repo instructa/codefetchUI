@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as yaml from 'js-yaml';
+import { validateRule as validateAstGrepRule } from './pattern-guard';
 
 // Types for ast-grep AI functionality
 // Update the AstGrepRule interface to a union type for better handling of simple and complex rules
@@ -173,64 +174,7 @@ export function isValidGeminiApiKey(key: string): boolean {
   return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
 }
 
-// Validate ast-grep rule for common issues
-export function validateAstGrepRule(rule: AstGrepRule): { valid: boolean; error?: string } {
-  if ('rule' in rule) {
-    // Complex rules from templates are assumed valid
-    return { valid: true };
-  }
-
-  // Check for simple rules
-  if (!('pattern' in rule) && !('kind' in rule)) {
-    return { valid: false, error: 'Rule must have either a pattern or kind field' };
-  }
-
-  // Check for newlines in pattern (common cause of MultipleNode errors)
-  if (rule.pattern && rule.pattern.includes('\n')) {
-    return {
-      valid: false,
-      error: 'Pattern contains newlines. Use single-line patterns with metavariables instead.',
-    };
-  }
-
-  // Check for unbalanced braces/parentheses
-  if (rule.pattern) {
-    const openBraces = (rule.pattern.match(/\{/g) || []).length;
-    const closeBraces = (rule.pattern.match(/\}/g) || []).length;
-    const openParens = (rule.pattern.match(/\(/g) || []).length;
-    const closeParens = (rule.pattern.match(/\)/g) || []).length;
-
-    if (openBraces !== closeBraces) {
-      return { valid: false, error: 'Unbalanced braces in pattern' };
-    }
-    if (openParens !== closeParens) {
-      return { valid: false, error: 'Unbalanced parentheses in pattern' };
-    }
-  }
-
-  // Check for valid metavariables - now accepting both uppercase and lowercase
-  if (rule.pattern) {
-    // Update regex to accept both uppercase and lowercase metavariables
-    const metavarPattern = /\$[A-Za-z_][A-Za-z0-9_]*|\$\$\$/g;
-
-    // Check for incomplete metavariables (but allow both cases)
-    const incompleteMetavar = /\$[^A-Za-z_$]/;
-    if (incompleteMetavar.test(rule.pattern)) {
-      return { valid: false, error: 'Invalid metavariable syntax' };
-    }
-
-    // Transform lowercase metavariables to uppercase before validation
-    const transformedPattern = rule.pattern.replace(
-      /\$([a-z_][a-zA-Z0-9_]*)/g,
-      (match, name) => '$' + name.toUpperCase()
-    );
-
-    // Update the rule with transformed pattern
-    rule.pattern = transformedPattern;
-  }
-
-  return { valid: true };
-}
+// Validate ast-grep rule for common issues (implementation moved to pattern-guard.ts)
 
 // Create a fallback rule for common queries
 export function createFallbackRule(prompt: string): AstGrepRule {

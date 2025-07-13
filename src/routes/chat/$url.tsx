@@ -30,7 +30,8 @@ import { Skeleton } from '~/components/ui/skeleton';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
 import { usePreviewStore } from '~/lib/stores/preview.store';
-import { useInteractiveGrep } from '~/hooks/use-interactive-grep';
+import { useCodeSearch } from '~/hooks/use-code-search';
+import type { SearchMetadata } from '~/hooks/use-code-search';
 import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Progress } from '~/components/ui/progress';
@@ -190,6 +191,9 @@ function ChatRoute() {
 
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const isMobile = useIsMobile();
+  const engineMeta = codeSearchResults.find(
+    (r) => r.type === 'metadata',
+  ) as SearchMetadata | undefined;
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters' | 'search'>('filters');
@@ -211,7 +215,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     results: codeSearchResults,
     error: codeSearchError,
     clearResults: clearCodeSearchResults,
-  } = useInteractiveGrep();
+  } = useCodeSearch();
 
   // Get store state and actions
   const {
@@ -808,7 +812,14 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 <div className="flex-1 overflow-hidden flex flex-col">
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium">AI-Enhanced Code Search</h3>
+                      <div className="flex items-center">
+                        <h3 className="text-sm font-medium">AI-Enhanced Code Search</h3>
+                        {engineMeta && (
+                          <Badge variant="outline" className="text-xs ml-2">
+                            {engineMeta.engine}
+                          </Badge>
+                        )}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"

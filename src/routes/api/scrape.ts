@@ -3,6 +3,7 @@ import { fetch as codefetchFetch, type FetchResultImpl } from 'codefetch-sdk/ser
 import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
 import { storeRepoData } from '~/server/repo-storage';
+import type { FileNode as RepoFileNode } from '~/lib/stores/scraped-data.store';
 
 export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request, context }) => {
@@ -148,6 +149,12 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
           }
         },
       });
+
+      const embedQueue = (context as any)?.cloudflare?.env?.EMBED_QUEUE;
+      if (embedQueue) {
+        // Send lightweight job – tree is already in memory.
+        await embedQueue.send(JSON.stringify({ url: targetUrl, tree: codefetch.root }));
+      }
 
       // Return streaming response with rate limit headers
       const remaining = await universalRateLimiter.getRemainingRequests(

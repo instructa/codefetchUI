@@ -2,6 +2,9 @@ import { createServerFileRoute } from '@tanstack/react-start/server';
 import { parse } from '@ast-grep/napi';
 import * as path from 'path';
 import { getRepoData } from '~/server/repo-storage';
+// <add import>
+import { normaliseRule } from '~/utils/pattern-guard';
+// </add>
 
 interface ContextItem {
   file: string;
@@ -216,6 +219,10 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
         );
       }
 
+      // <add>
+      const safeRule = normaliseRule(rule);
+      // </add>
+
       // Create streaming response
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
@@ -240,8 +247,10 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
           // Search through repository data
           const matches = await processRepoFileWithPattern(
             repoData.root,
-            rule.pattern,
-            rule.language
+            // <add>
+            safeRule.pattern,
+            // </add>
+            safeRule.languages || rule.language
           );
 
           for (const match of matches) {

@@ -16,17 +16,17 @@ import { Badge } from '~/components/ui/badge';
 import { ScrollArea } from '~/components/ui/scroll-area';
 import { cn } from '~/lib/utils';
 import type {
-  GrepMatch,
-  GrepMetadata,
-  GrepResult,
-  GrepSummary,
-  GrepSuggestion,
-} from '~/hooks/use-interactive-grep';
+  SearchResult,
+  SearchMatch,
+  SearchMetadata,
+  SearchSummary,
+  SearchSuggestion,
+} from '~/hooks/use-code-search';
 import { useIsMobile } from '~/hooks/use-mobile';
 import { Button } from '~/components/ui/button';
 
 interface CodeSearchResultsProps {
-  results: GrepResult[];
+  results: SearchResult[];
   isSearching: boolean;
   error?: string | null;
   onRetry?: () => void; // Added optional retry callback for error handling
@@ -42,10 +42,10 @@ export function CodeSearchResults({
   const parentRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const metadata = results.find((r) => r.type === 'metadata') as GrepMetadata | undefined;
-  const matches = results.filter((r) => r.type === 'match') as GrepMatch[];
-  const summary = results.find((r) => r.type === 'summary') as GrepSummary | undefined;
-  const suggestions = results.filter((r) => r.type === 'suggestion') as GrepSuggestion[];
+  const metadata = results.find((r) => r.type === 'metadata') as SearchMetadata | undefined;
+  const matches = results.filter((r) => r.type === 'match') as SearchMatch[];
+  const summary = results.find((r) => r.type === 'summary') as SearchSummary | undefined;
+  const suggestions = results.filter((r) => r.type === 'suggestion') as SearchSuggestion[];
 
   // Group matches by file
   const matchesByFile = matches.reduce(
@@ -56,7 +56,7 @@ export function CodeSearchResults({
       acc[match.file].push(match);
       return acc;
     },
-    {} as Record<string, GrepMatch[]>
+    {} as Record<string, SearchMatch[]>
   );
 
   // Create file list for virtualizer
@@ -249,21 +249,36 @@ export function CodeSearchResults({
 
                           <CollapsibleContent>
                             <div className="border-t">
-                              {fileMatches.map((match, idx) => (
-                                <div
-                                  key={`${match.file}-${match.lines[0]}-${idx}`}
-                                  className={cn('p-3', idx < fileMatches.length - 1 && 'border-b')}
-                                >
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs text-muted-foreground">
-                                      Lines {match.lines[0]}-{match.lines[1]}
-                                    </span>
+                              {fileMatches.map((match, idx) => {
+                                const tierColour =
+                                  match.tier === 'high'
+                                    ? 'border-green-500'
+                                    : match.tier === 'mid'
+                                    ? 'border-amber-500'
+                                    : match.tier === 'low'
+                                    ? 'border-slate-400'
+                                    : 'border-muted';
+
+                                return (
+                                  <div
+                                    key={`${match.file}-${match.lines[0]}-${idx}`}
+                                    className={cn(
+                                      'p-3 border-l-4',
+                                      tierColour,
+                                      idx < fileMatches.length - 1 && 'border-b'
+                                    )}
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs text-muted-foreground">
+                                        Lines {match.lines[0]}-{match.lines[1]}
+                                      </span>
+                                    </div>
+                                    <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                                      <code>{match.snippet}</code>
+                                    </pre>
                                   </div>
-                                  <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                                    <code>{match.snippet}</code>
-                                  </pre>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </CollapsibleContent>
                         </div>
