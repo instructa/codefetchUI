@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { buildAuthApp } from '../auth.cf';
 
+type RateLimit = { limit(key: string): Promise<{ allowed: boolean }> };
+
 export interface Env {
   AI_RATELIMIT: RateLimit;
   QUOTA_DO: DurableObjectNamespace;

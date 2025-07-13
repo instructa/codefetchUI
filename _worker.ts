@@ -3,6 +3,9 @@ import { buildAuthApp } from './src/server/auth.cf';
 import aiRoute from './src/server/routes/ai';
 import { QuotaDO } from './src/server/quota-do';
 
+/** Minimal shape of the experimental Cloudflare RateLimit binding */
+type RateLimit = { limit(key: string): Promise<{ allowed: boolean }> };
+
 export interface Env extends Record<string, unknown> {
   AUTH_DB: D1Database;
   AI_RATELIMIT: RateLimit;
