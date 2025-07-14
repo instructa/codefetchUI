@@ -7,6 +7,7 @@ import {
   Queue,
   DurableObjectNamespace,
   AiGateway,
+  Worker,
 } from 'alchemy/cloudflare';
 // Vectorize might need to be imported separately or might not be available yet
 import { config } from 'dotenv';
@@ -186,6 +187,25 @@ const site = await TanStackStart('codefetch-ui', {
   },
 });
 
+// Deploy the embed worker separately
+const embedWorker = await Worker('embed-worker', {
+  name: `codefetch-embed-worker-${app.stage}`,
+  script: './src/cloudflare/workers/embed.worker.ts',
+  bindings: {
+    EMBED_QUEUE: embedQueue,
+    // Add any other bindings the embed worker needs
+    // CF_VECTORIZE_INDEX: vectorizeIndex, // When Vectorize is available
+    // CF_AI_MODEL: 'text-embedding-ada-002', // Or whatever model you're using
+  },
+  consumers: [
+    {
+      queue: embedQueue.name,
+      maxBatchSize: 10,
+      maxBatchTimeout: 30,
+    },
+  ],
+});
+
 // Clean up orphaned resources
 await app.finalize();
 
@@ -198,6 +218,7 @@ console.log(`  - Cache KV: ${cacheKV.title}`);
 console.log(`  - Main Database: ${database.name}`);
 console.log(`  - Analytics Database: ${analyticsDb.name}`);
 console.log(`  - TanStack Start site: ${site.name}`);
+console.log(`  - Embed Worker: ${embedWorker.name}`);
 
 if (site.url) {
   console.log(`\n🌐 Site deployed at: ${site.url}`);

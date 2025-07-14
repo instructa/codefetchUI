@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { buildAuthApp } from '../auth.cf';
+import { buildAuthApp } from '../../server/auth.cf';
 
 // <add cf-type-import>
 import type { D1Database, DurableObjectNamespace } from '@cloudflare/workers-types';

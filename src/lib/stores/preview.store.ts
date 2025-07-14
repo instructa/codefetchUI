@@ -37,7 +37,7 @@ export const usePreviewStore = create<PreviewStore>()(
       // Create worker if it doesn't exist
       let currentWorker = worker;
       if (!currentWorker) {
-        currentWorker = new Worker(new URL('../../workers/preview.worker.ts', import.meta.url), {
+        currentWorker = new Worker(new URL('../workers/preview.worker.ts', import.meta.url), {
           type: 'module',
         });
 
