@@ -1,9 +1,9 @@
 import alchemy from 'alchemy';
 import {
+  TanStackStart,
   R2Bucket,
   KVNamespace,
   D1Database,
-  Worker,
   Queue,
   DurableObjectNamespace,
   AiGateway,
@@ -144,39 +144,46 @@ const secrets = {
   MONTHLY_TOKEN_LIMIT: alchemy.secret(process.env.MONTHLY_TOKEN_LIMIT || '1000000'),
 };
 
-// Create the main worker with correct TanStack Start build output
-const worker = await Worker(`codefetch-ui-${app.stage}`, {
-  entrypoint: './dist/_worker.js',
-  compatibilityDate: '2024-11-19',
+// ------------------------------------------------------------
+// Deploy the TanStack Start site (v1.126) using the new helper
+// ------------------------------------------------------------
+
+const site = await TanStackStart('codefetch-ui', {
+  // Build command – override if you have a custom one
+  command: 'pnpm run build',
+
+  // Make all previously-created resources available to the app
   bindings: {
     // Storage (KV and R2)
     SESSIONS: sessionsKV,
     CACHE: cacheKV,
     UPLOADS: uploadsBucket,
 
-    // Note: We're using CACHE KV for rate limiting
-    // The app expects it as RATE_LIMIT_KV but we'll use CACHE
+    // Rate-limit KV alias
     RATE_LIMIT_KV: cacheKV,
 
     // Secrets
     ...secrets,
 
-    // AI binding - this gives access to Workers AI and AutoRAG
+    // Cloudflare AI Gateway + Workers AI
     AI: true,
 
-    // Queue binding
+    // Queue + Analytics + DBs
     EMBED_QUEUE: embedQueue,
-
-    // Analytics binding
     ANALYTICS: analyticsDb,
-
     AUTH_DB: authDb,
+
+    // Custom bindings used by our server routes
     AI_RATELIMIT: aiLimit,
     QUOTA_DO: quotaDO,
     AI_GATEWAY_URL: alchemy.secret(process.env.AI_GATEWAY_URL || 'https://gw.example.ai'),
   },
-  // Remove routes since we don't have a custom domain
-  // The worker will be accessible via workers.dev subdomain
+
+  // Runtime environment variables (non-secret)
+  vars: {
+    NODE_ENV: stage === 'prod' ? 'production' : 'development',
+    MONTHLY_TOKEN_LIMIT: process.env.MONTHLY_TOKEN_LIMIT || '1000000',
+  },
 });
 
 // Clean up orphaned resources
@@ -190,10 +197,10 @@ console.log(`  - Sessions KV: ${sessionsKV.title}`);
 console.log(`  - Cache KV: ${cacheKV.title}`);
 console.log(`  - Main Database: ${database.name}`);
 console.log(`  - Analytics Database: ${analyticsDb.name}`);
-console.log(`  - Worker: ${worker.name}`);
+console.log(`  - TanStack Start site: ${site.name}`);
 
-if (worker.url) {
-  console.log(`\n🌐 Worker URL: ${worker.url}`);
+if (site.url) {
+  console.log(`\n🌐 Site deployed at: ${site.url}`);
   console.log(`\n🧪 Test your API:`);
-  console.log(`  curl "${worker.url}/api/scrape?url=https://github.com/facebook/react"`);
+  console.log(`  curl "${site.url}/api/scrape?url=https://github.com/facebook/react"`);
 }
