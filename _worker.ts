@@ -1,6 +1,4 @@
-import { Hono } from 'hono';
-import { buildAuthApp } from './src/server/auth.cf';
-import aiRoute from './src/server/routes/ai';
+import { createServerFn } from '@tanstack/react-start/server';
 import { QuotaDO } from './src/server/quota-do';
 
 import type {
@@ -26,11 +24,11 @@ export interface Env extends Record<string, unknown> {
  *  – `/api/auth/**` routed via Better‑Auth (inside `buildAuthApp`)
  *  – `/api/ai/**` routed through AI Gateway with quota checks
  */
+const handleRequest = createServerFn();
+
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const app = buildAuthApp(env);
-    app.route('/api/ai', aiRoute);
-    return app.fetch(request, env, ctx);
+    return handleRequest(request, env, ctx);
   },
 };
 
