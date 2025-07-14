@@ -1,9 +1,9 @@
 // Web Worker for generating markdown preview
-import { filterFileTree } from '~/utils/filter-file-tree';
+import { filterFileTree } from '../utils/filter-file-tree';
 import { FetchResultImpl, countTokens, type FileNode as SDKFileNode } from 'codefetch-sdk';
 // @ts-ignore - prompts is a default export
 import prompts from 'codefetch-sdk/prompts';
-import type { FileNode } from '~/lib/stores/scraped-data.store';
+import type { FileNode } from '../lib/stores/scraped-data.store';
 
 // Helper function to convert our FileNode to SDK FileNode
 function convertToSDKFileNode(node: FileNode): SDKFileNode {

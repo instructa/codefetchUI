@@ -4,14 +4,21 @@ import { honoCookies } from 'better-auth/hono';
 import { Hono } from 'hono';
 import { createDB, HasDB } from './db';
 
+import type { D1Database, DurableObjectNamespace } from '@cloudflare/workers-types';
+
+type RateLimit = { limit(key: string): Promise<{ allowed: boolean }> };
+
 export interface Env extends HasDB {
+  AI_RATELIMIT: RateLimit;
+  QUOTA_DO: DurableObjectNamespace;
+  AI_GATEWAY_URL: string;
   SESSION_COOKIE_NAME: string;
-  // …keep the rest of your secret vars (RESEND_API_KEY, BETTER_AUTH_SECRET, etc.)
+  MONTHLY_TOKEN_LIMIT: string;
 }
 
 export function buildAuthApp(env: Env) {
   const app = new Hono<Env>();
-  const db  = createDB(env);
+  const db = createDB(env);
 
   const auth = betterAuth({
     database: drizzleAdapter(db, { provider: 'd1' }),

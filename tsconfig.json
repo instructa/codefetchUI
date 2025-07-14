@@ -15,6 +15,7 @@
         "forceConsistentCasingInFileNames": true,
         "baseUrl": ".",
         "paths": {
+            "@ast-grep/napi": ["src/shims/ast-grep-napi.ts"],
             "~/*": ["./src/*"]
         },
         "noEmit": true

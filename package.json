@@ -78,6 +78,7 @@
     "drizzle-orm": "^0.44.2",
     "fast-glob": "^3.3.3",
     "framer-motion": "^12.16.0",
+    "hono": "^4.8.4",
     "js-yaml": "^4.1.0",
     "lucide-react": "^0.513.0",
     "motion": "^12.16.0",
@@ -105,6 +106,7 @@
   "devDependencies": {
     "@ast-grep/napi": "^0.38.7",
     "@cloudflare/workerd-darwin-arm64": "^1.20250705.0",
+    "@cloudflare/workers-types": "^4.20250712.0",
     "@napi-rs/cli": "^2.18.4",
     "@tailwindcss/postcss": "^4.1.8",
     "@tailwindcss/vite": "^4.1.8",

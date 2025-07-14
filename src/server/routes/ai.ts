@@ -1,6 +1,11 @@
 import { Hono } from 'hono';
 import { buildAuthApp } from '../auth.cf';
 
+// <add cf-type-import>
+import type { D1Database, DurableObjectNamespace } from '@cloudflare/workers-types';
+// </add>
+
+// RateLimit alias already added below
 type RateLimit = { limit(key: string): Promise<{ allowed: boolean }> };
 
 export interface Env {
@@ -10,6 +15,7 @@ export interface Env {
   // plus whatever else your worker exposes
   AUTH_DB: D1Database;
   SESSION_COOKIE_NAME: string;
+  MONTHLY_TOKEN_LIMIT: string;
 }
 
 const ai = new Hono<Env>();

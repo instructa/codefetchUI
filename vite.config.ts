@@ -3,6 +3,9 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import { defineConfig } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
 import react from '@vitejs/plugin-react';
+import path from 'path';
+
+const astGrepShim = path.resolve(__dirname, 'src/shims/ast-grep-napi.ts');
 
 export default defineConfig({
   server: {
@@ -24,4 +27,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      '@ast-grep/napi': astGrepShim,
+    },
+  },
 });

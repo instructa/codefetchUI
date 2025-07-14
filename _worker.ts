@@ -3,6 +3,12 @@ import { buildAuthApp } from './src/server/auth.cf';
 import aiRoute from './src/server/routes/ai';
 import { QuotaDO } from './src/server/quota-do';
 
+import type {
+  D1Database,
+  DurableObjectNamespace,
+  ExecutionContext,
+} from '@cloudflare/workers-types';
+
 /** Minimal shape of the experimental Cloudflare RateLimit binding */
 type RateLimit = { limit(key: string): Promise<{ allowed: boolean }> };
 

@@ -1,3 +1,5 @@
+import type { DurableObjectState } from '@cloudflare/workers-types';
+
 /**
  * Durable Object that keeps a running total of tokens used per user per month.
  *
