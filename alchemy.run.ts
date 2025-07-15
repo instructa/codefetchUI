@@ -115,9 +115,6 @@ const quotaDO = new DurableObjectNamespace('QuotaDO', {
 
 // Prepare encrypted secrets for the worker
 const secrets = {
-  // Database URL (will need to be transformed for D1 later)
-  DATABASE_URL: alchemy.secret(process.env.DATABASE_URL || ''),
-
   // Authentication
   BETTER_AUTH_SECRET: alchemy.secret(process.env.BETTER_AUTH_SECRET || ''),
   BETTER_AUTH_URL: alchemy.secret(
