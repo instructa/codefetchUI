@@ -2,7 +2,6 @@ import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import { defineConfig, PluginOption } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
-import { cloudflareWorkersDevEnvironmentShim } from 'alchemy/cloudflare';
 import viteReact from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -15,12 +14,17 @@ export default defineConfig({
   build: {
     target: 'esnext',
     rollupOptions: {
-      external: ['node:async_hooks', 'cloudflare:workers'],
+      external: [
+        'node:async_hooks',
+        'cloudflare:workers',
+        'tanstack-start-manifest:v',
+        'tanstack-start-route-tree:v',
+        'tanstack-start-server-fn-manifest:v',
+      ],
     },
   },
   plugins: [
     tailwindcss() as PluginOption,
-    cloudflareWorkersDevEnvironmentShim(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
