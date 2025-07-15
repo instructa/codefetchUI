@@ -1,22 +1,30 @@
-import { boolean, pgTable, text } from 'drizzle-orm/pg-core';
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-import { timestamps, timestamptz } from './_shared';
-import { user } from './auth.schema';
-
-export const profile = pgTable('profile', {
-  id: text('id')
+/**
+ * User profile table – SQLite / Cloudflare D1 version.
+ */
+export const profile = sqliteTable("profile", {
+  id: text("id")
     .primaryKey()
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  username: text('username').unique(),
-  email: text('email'),
+    .notNull(),
+  username: text("username").unique(),
+  email: text("email"),
 
-  avatar: text('avatar'),
-  phone: text('phone'),
-  firstName: text('firstName'),
-  lastName: text('lastName'),
-  fullName: text('fullName'),
-  isOnboarded: boolean('isOnboardingComplete').default(false),
-  emailVerifiedAt: timestamptz('email_verified_at'),
-  ...timestamps,
+  avatar: text("avatar"),
+  phone: text("phone"),
+  firstName: text("firstName"),
+  lastName: text("lastName"),
+  fullName: text("fullName"),
+  isOnboarded: integer("isOnboardingComplete", { mode: "boolean" }).$defaultFn(() => false),
+
+  /** Mirrors the old `timestamptz` column; stored as milliseconds */
+  emailVerifiedAt: integer("email_verified_at", { mode: "timestamp_ms" }),
+
+  // createdAt / updatedAt helpers
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => Date.now())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => Date.now())
+    .notNull(),
 });

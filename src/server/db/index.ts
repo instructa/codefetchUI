@@ -1,9 +1,17 @@
-import postgres from "postgres"
-import { drizzle } from "drizzle-orm/postgres-js"
-import * as authSchema from "./auth.schema"
+import { drizzle as drizzleD1 } from "drizzle-orm/d1";
+import * as authSchema from "./auth_d1.schema";
+import type { D1Database } from "@cloudflare/workers-types";
 
-const connectionString = process.env.DATABASE_URL || "postgresql://localhost:5432/constructa"
-const client = postgres(connectionString)
-export const db = drizzle(client, { schema: authSchema })
+/* ------------------------------------------------------------------ */
+/* Cloudflare D1                                                      */
+/* ------------------------------------------------------------------ */
 
-export { authSchema }
+export type HasDB = { AUTH_DB: D1Database };
+
+/**
+ * Always return a D1‑backed Drizzle client.
+ * In unit tests you can supply a Miniflare‑provided D1 instance.
+ */
+export function createDB(env: HasDB) {
+  return drizzleD1(env.AUTH_DB, { schema: authSchema });
+}
