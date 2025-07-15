@@ -6,7 +6,7 @@ import { reactStartCookies } from 'better-auth/react-start';
 import { magicLink } from 'better-auth/plugins';
 import { schema } from '~/db/schema';
 import { sendEmail } from './email';
-import type { CloudflareEnv } from '~/types/env';
+import type { CloudflareEnv } from '../../types/env';
 
 // Create an auth instance for the Cloudflare runtime.
 // Pass your Worker "env" and (optionally) the Cloudflare Request.cf object
