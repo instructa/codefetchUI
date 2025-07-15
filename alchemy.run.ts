@@ -8,6 +8,7 @@ import {
   DurableObjectNamespace,
   AiGateway,
   Worker,
+  Ai,
 } from 'alchemy/cloudflare';
 // Vectorize might need to be imported separately or might not be available yet
 import { config } from 'dotenv';
@@ -50,7 +51,6 @@ const stage = process.env.STAGE || 'dev';
 const app = await alchemy('codefetch-ui', {
   stage,
   password: process.env.ALCHEMY_PASSWORD,
-  // We'll add R2 state store configuration later after creating the bucket
 });
 
 console.log(`🚀 Deploying CodeFetch UI to stage: ${app.stage}`);
@@ -164,7 +164,7 @@ const site = await TanStackStart('codefetch-ui', {
     ...secrets,
 
     // Cloudflare AI Gateway + Workers AI
-    AI: true,
+    AI: aiLimit,
 
     // Queue + Analytics + DBs
     EMBED_QUEUE: embedQueue,
@@ -175,12 +175,6 @@ const site = await TanStackStart('codefetch-ui', {
     AI_RATELIMIT: aiLimit,
     QUOTA_DO: quotaDO,
     AI_GATEWAY_URL: alchemy.secret(process.env.AI_GATEWAY_URL || 'https://gw.example.ai'),
-  },
-
-  // Runtime environment variables (non-secret)
-  vars: {
-    NODE_ENV: stage === 'prod' ? 'production' : 'development',
-    MONTHLY_TOKEN_LIMIT: process.env.MONTHLY_TOKEN_LIMIT || '1000000',
   },
 });
 
@@ -196,13 +190,6 @@ const embedWorker = await Worker('embed-worker', {
     // CF_VECTORIZE_INDEX: vectorizeIndex, // When Vectorize is available
     // CF_AI_MODEL: 'text-embedding-ada-002', // Or whatever model you're using
   },
-  consumers: [
-    {
-      queue: embedQueue.name,
-      maxBatchSize: 10,
-      maxBatchTimeout: 30,
-    },
-  ],
 });
 
 // Clean up orphaned resources
