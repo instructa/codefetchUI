@@ -4,6 +4,9 @@ import type { worker } from '../alchemy.run.ts';
 
 export type CloudflareEnv = typeof worker.Env;
 
+/** Minimal shape of the experimental Cloudflare RateLimit binding */
+type RateLimit = { limit(key: string): Promise<{ allowed: boolean }> };
+
 declare global {
   type Env = CloudflareEnv;
 }
@@ -16,7 +19,6 @@ declare module 'cloudflare:workers' {
 
 declare module '@tanstack/react-start/server' {
   interface RequestContext extends CloudflareEnv {
-    // Additional context properties
     ctx?: ExecutionContext;
     cf?: IncomingRequestCfProperties;
   }

@@ -187,6 +187,8 @@ const site = await TanStackStart('codefetch-ui', {
   },
 });
 
+export { site as worker };
+
 // Deploy the embed worker separately
 const embedWorker = await Worker('embed-worker', {
   name: `codefetch-embed-worker-${app.stage}`,

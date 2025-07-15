@@ -1,121 +1,138 @@
+import type { IncomingRequestCfProperties } from '@cloudflare/workers-types';
 import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { withCloudflare } from 'better-auth-cloudflare';
+import { drizzle } from 'drizzle-orm/d1';
 import { reactStartCookies } from 'better-auth/react-start';
-import { db } from '~/db/db-config';
-import { sendEmail } from './email';
 import { magicLink } from 'better-auth/plugins';
+import { schema } from '~/db/schema';
+import { sendEmail } from './email';
+import type { CloudflareEnv } from '~/types/env';
 
-const isProd = process.env.NODE_ENV === 'production';
+// Create an auth instance for the Cloudflare runtime.
+// Pass your Worker "env" and (optionally) the Cloudflare Request.cf object
+// to get full geolocation/IP awareness.
+function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
+  // Initialise the D1 database only when an Env is provided (runtime).
+  const db = env ? drizzle(env.AUTH_DB, { schema }) : ({} as any);
 
-const isEmailVerificationEnabled = process.env.ENABLE_EMAIL_VERIFICATION === 'true';
+  const isProd = env?.NODE_ENV === 'production';
+  const isEmailVerificationEnabled = env?.ENABLE_EMAIL_VERIFICATION === 'true';
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: 'pg',
-  }),
-  plugins: [
-    reactStartCookies({
-      // 1️⃣  Secure session cookie options
-      cookieName: process.env.SESSION_COOKIE_NAME ?? 'ex0_session',
-      cookieOptions: {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        path: '/',
+  // Helper used by all outgoing transactional emails
+  const sendEmailWithEnv = async (options: Parameters<typeof sendEmail>[0]) => {
+    await sendEmail(options);
+  };
+
+  return betterAuth({
+    ...withCloudflare(
+      {
+        autoDetectIpAddress: true,
+        geolocationTracking: true,
+        cf: cf || {},
+        d1: env
+          ? {
+              db,
+              options: {
+                usePlural: true,
+                debugLogs: !isProd,
+              },
+            }
+          : undefined,
+        kv: env?.SESSIONS,
       },
-    }),
-    magicLink({
-      async sendMagicLink({ email, url }) {
-        await sendEmail({
-          to: email,
-          subject: 'Sign in to Constructa',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Sign in to Constructa</h2>
-              <p>Click the button below to sign in. This link will expire in 5 minutes.</p>
-              <a href="${url}" style="display:inline-block;padding:12px 24px;background-color:#4F46E5;color:white;text-decoration:none;border-radius:6px;">Sign In</a>
-              <p style="margin-top:20px;color:#666;">If the button above does not work, copy and paste the following link into your browser:</p>
-              <p style="word-break:break-all;color:#666;">${url}</p>
-              <p style="margin-top:30px;color:#999;font-size:14px;">If you did not request this email, you can safely ignore it.</p>
-            </div>
-          `,
-        });
-      },
-    }),
-  ],
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: isEmailVerificationEnabled,
-    sendResetPassword: async ({ user, url }) => {
-      try {
-        await sendEmail({
-          to: user.email,
-          subject: 'Reset your password',
-          html: `
-						<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-							<h2>Reset Your Password</h2>
-							<p>You requested to reset your password. Click the button below to continue:</p>
-							<a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px;">Reset Password</a>
-							<p style="margin-top: 20px; color: #666;">Or copy and paste this link into your browser:</p>
-							<p style="word-break: break-all; color: #666;">${url}</p>
-							<p style="margin-top: 30px; color: #999; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
-						</div>
-					`,
-        });
-      } catch (error) {
-        console.error('Failed to send password reset email:', error);
-        throw error; // We want password reset failures to propagate
-      }
-    },
-  },
-  emailVerification: {
-    // Only send verification emails if verification is enabled
-    sendOnSignUp: isEmailVerificationEnabled,
-    autoSignInAfterVerification: true,
-    sendVerificationEmail: isEmailVerificationEnabled
-      ? async ({ user, url }) => {
-          try {
-            await sendEmail({
-              to: user.email as string,
-              subject: 'Verify your email address',
+      {
+        emailAndPassword: {
+          enabled: true,
+          requireEmailVerification: isEmailVerificationEnabled,
+          sendResetPassword: async ({ user, url }) => {
+            await sendEmailWithEnv({
+              to: user.email,
+              subject: 'Reset your password',
               html: `
-						<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-							<h2>Verify your email address</h2>
-							<p>Please click the button below to verify your email address:</p>
-							<a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px;">Verify Email</a>
-							<p style="margin-top: 20px; color: #666;">Or copy and paste this link into your browser:</p>
-							<p style="word-break: break-all; color: #666;">${url}</p>
-							<p style="margin-top: 30px; color: #999; font-size: 14px;">If you didn't request this email, you can safely ignore it.</p>
-						</div>
-					`,
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2>Reset Your Password</h2>
+                  <p>You requested to reset your password. Click the button below to continue:</p>
+                  <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px;">Reset Password</a>
+                  <p style="margin-top: 20px; color: #666;">Or copy and paste this link into your browser:</p>
+                  <p style="word-break: break-all; color: #666;">${url}</p>
+                  <p style="margin-top: 30px; color: #999; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                </div>
+              `,
             });
-          } catch (error) {
-            console.error('Failed to send verification email:', error);
-            // Don't throw here to prevent sign-up from failing
-          }
-        }
-      : undefined,
-  },
-  socialProviders: {
-    ...(process.env.GITHUB_CLIENT_ID && {
-      github: {
-        clientId: process.env.GITHUB_CLIENT_ID,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-      },
-    }),
-    ...(process.env.GOOGLE_CLIENT_ID && {
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      },
-    }),
-  },
-  // 2️⃣  Enable in-memory rate limiting for integration tests and local dev
-  rateLimit: {
-    enabled: true,
-    window: 60, // seconds
-    max: 10, // allow 10 requests per window (tests expect 429 on the 11th)
-  },
-});
+          },
+        },
+        emailVerification: {
+          sendOnSignUp: isEmailVerificationEnabled,
+          autoSignInAfterVerification: true,
+          sendVerificationEmail: isEmailVerificationEnabled
+            ? async ({ user, url }) => {
+                await sendEmailWithEnv({
+                  to: user.email as string,
+                  subject: 'Verify your email address',
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                      <h2>Verify your email address</h2>
+                      <p>Please click the button below to verify your email address:</p>
+                      <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px;">Verify Email</a>
+                      <p style="margin-top: 20px; color: #666;">Or copy and paste this link into your browser:</p>
+                      <p style="word-break: break-all; color: #666;">${url}</p>
+                      <p style="margin-top: 30px; color: #999; font-size: 14px;">If you didn't request this email, you can safely ignore it.</p>
+                    </div>
+                  `,
+                });
+              }
+            : undefined,
+        },
+        socialProviders: {
+          ...(env?.GITHUB_CLIENT_ID &&
+            env?.GITHUB_CLIENT_SECRET && {
+              github: {
+                clientId: env.GITHUB_CLIENT_ID,
+                clientSecret: env.GITHUB_CLIENT_SECRET as string,
+              },
+            }),
+          ...(env?.GOOGLE_CLIENT_ID &&
+            env?.GOOGLE_CLIENT_SECRET && {
+              google: {
+                clientId: env.GOOGLE_CLIENT_ID,
+                clientSecret: env.GOOGLE_CLIENT_SECRET as string,
+              },
+            }),
+        },
+        plugins: [
+          reactStartCookies(),
+          magicLink({
+            async sendMagicLink({ email, url }) {
+              await sendEmailWithEnv({
+                to: email,
+                subject: 'Sign in to Constructa',
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Sign in to Constructa</h2>
+                    <p>Click the button below to sign in. This link will expire in 5 minutes.</p>
+                    <a href="${url}" style="display:inline-block;padding:12px 24px;background-color:#4F46E5;color:white;text-decoration:none;border-radius:6px;">Sign In</a>
+                    <p style="margin-top:20px;color:#666;">If the button above does not work, copy and paste the following link into your browser:</p>
+                    <p style="word-break:break-all;color:#666;">${url}</p>
+                    <p style="margin-top:30px;color:#999;font-size:14px;">If you did not request this email, you can safely ignore it.</p>
+                  </div>
+                `,
+              });
+            },
+          }),
+        ],
+        rateLimit: {
+          enabled: true,
+          window: 60,
+          max: 10,
+        },
+      }
+    ),
+  });
+}
 
+// For local tooling & schema generation (no Env available)
+export const auth = createAuth();
+
+// Export factory for runtime usage
+export { createAuth };
 export default auth;

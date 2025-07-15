@@ -128,6 +128,9 @@ importers:
       better-auth:
         specifier: ^1.2.9
         version: 1.2.9
+      better-auth-cloudflare:
+        specifier: ^0.2.0
+        version: 0.2.0(@cloudflare/workers-types@4.20250712.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-auth@1.2.9)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7)
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -4846,6 +4849,11 @@ packages:
   before-after-hook@3.0.2:
     resolution: {integrity: sha512-Nik3Sc0ncrMK4UUdXQmAnRtzmNQTAAXmXIopizwZ1W1t8QmfJj+zL4OA2I7XPTPW5z5TDqv4hRo/JzouDJnX3A==}
 
+  better-auth-cloudflare@0.2.0:
+    resolution: {integrity: sha512-MsprcPv+OUMd7fGeyKy/VPSsTkkTPzGYEgtKR38UDtvQftT7ViX2/63QBAaZmtXwCiUetN7JEIjUapctb4lhgA==}
+    peerDependencies:
+      better-auth: ^1.1.21
+
   better-auth@1.2.9:
     resolution: {integrity: sha512-WLqBXDzuaCQetQctLGC5oTfGmL32zUvxnM4Y+LZkhwseMaZWq5EKI+c/ZATgz2YkFt7726q659PF8CfB9P1VuA==}
 
@@ -5540,6 +5548,95 @@ packages:
   drizzle-kit@0.31.1:
     resolution: {integrity: sha512-PUjYKWtzOzPtdtQlTHQG3qfv4Y0XT8+Eas6UbxCmxTj7qgMf+39dDujf1BP1I+qqZtw9uzwTh8jYtkMuCq+B0Q==}
     hasBin: true
+
+  drizzle-orm@0.43.1:
+    resolution: {integrity: sha512-dUcDaZtE/zN4RV/xqGrVSMpnEczxd5cIaoDeor7Zst9wOe/HzC/7eAaulywWGYXdDEc9oBPMjayVEDg0ziTLJA==}
+    peerDependencies:
+      '@aws-sdk/client-rds-data': '>=3'
+      '@cloudflare/workers-types': '>=4'
+      '@electric-sql/pglite': '>=0.2.0'
+      '@libsql/client': '>=0.10.0'
+      '@libsql/client-wasm': '>=0.10.0'
+      '@neondatabase/serverless': '>=0.10.0'
+      '@op-engineering/op-sqlite': '>=2'
+      '@opentelemetry/api': ^1.4.1
+      '@planetscale/database': '>=1.13'
+      '@prisma/client': '*'
+      '@tidbcloud/serverless': '*'
+      '@types/better-sqlite3': '*'
+      '@types/pg': '*'
+      '@types/sql.js': '*'
+      '@vercel/postgres': '>=0.8.0'
+      '@xata.io/client': '*'
+      better-sqlite3: '>=7'
+      bun-types: '*'
+      expo-sqlite: '>=14.0.0'
+      gel: '>=2'
+      knex: '*'
+      kysely: '*'
+      mysql2: '>=2'
+      pg: '>=8'
+      postgres: '>=3'
+      prisma: '*'
+      sql.js: '>=1'
+      sqlite3: '>=5'
+    peerDependenciesMeta:
+      '@aws-sdk/client-rds-data':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@libsql/client-wasm':
+        optional: true
+      '@neondatabase/serverless':
+        optional: true
+      '@op-engineering/op-sqlite':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@planetscale/database':
+        optional: true
+      '@prisma/client':
+        optional: true
+      '@tidbcloud/serverless':
+        optional: true
+      '@types/better-sqlite3':
+        optional: true
+      '@types/pg':
+        optional: true
+      '@types/sql.js':
+        optional: true
+      '@vercel/postgres':
+        optional: true
+      '@xata.io/client':
+        optional: true
+      better-sqlite3:
+        optional: true
+      bun-types:
+        optional: true
+      expo-sqlite:
+        optional: true
+      gel:
+        optional: true
+      knex:
+        optional: true
+      kysely:
+        optional: true
+      mysql2:
+        optional: true
+      pg:
+        optional: true
+      postgres:
+        optional: true
+      prisma:
+        optional: true
+      sql.js:
+        optional: true
+      sqlite3:
+        optional: true
 
   drizzle-orm@0.44.2:
     resolution: {integrity: sha512-zGAqBzWWkVSFjZpwPOrmCrgO++1kZ5H/rZ4qTGeGOe18iXGVJWf3WPfHOVwFIbmi8kHjfJstC6rJomzGx8g/dQ==}
@@ -15436,6 +15533,41 @@ snapshots:
 
   before-after-hook@3.0.2: {}
 
+  better-auth-cloudflare@0.2.0(@cloudflare/workers-types@4.20250712.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-auth@1.2.9)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7):
+    dependencies:
+      better-auth: 1.2.9
+      drizzle-orm: 0.43.1(@cloudflare/workers-types@4.20250712.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7)
+      zod: 3.25.56
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
   better-auth@1.2.9:
     dependencies:
       '@better-auth/utils': 0.2.5
@@ -16192,6 +16324,16 @@ snapshots:
       esbuild-register: 3.6.0(esbuild@0.25.5)
     transitivePeerDependencies:
       - supports-color
+
+  drizzle-orm@0.43.1(@cloudflare/workers-types@4.20250712.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7):
+    optionalDependencies:
+      '@cloudflare/workers-types': 4.20250712.0
+      '@opentelemetry/api': 1.9.0
+      '@types/pg': 8.15.4
+      better-sqlite3: 11.10.0
+      kysely: 0.28.2
+      pg: 8.16.0
+      postgres: 3.4.7
 
   drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250712.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@11.10.0)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7):
     optionalDependencies:

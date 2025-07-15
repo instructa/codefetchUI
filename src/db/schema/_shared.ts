@@ -1,11 +1,26 @@
-import { timestamp } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { integer } from 'drizzle-orm/sqlite-core';
 
-export const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
+// Helper to create SQLite integer columns that store JavaScript Date objects as timestamps
+export const timestampColumn = (name: string) => integer(name, { mode: 'timestamp' });
 
-export const createdAt = () => timestamptz('created_at').notNull().defaultNow();
-export const updatedAt = () => timestamptz('updated_at').notNull().defaultNow().$onUpdate(() => sql`CURRENT_TIMESTAMP`);
-export const accessedAt = () => timestamptz('accessed_at').notNull().defaultNow();
+/**
+ * Convenience helpers for common timestamp columns. Uses JavaScript Date objects
+ * so values are consistent between server and Cloudflare D1.
+ */
+export const createdAt = () =>
+  timestampColumn('created_at')
+    .$defaultFn(() => new Date())
+    .notNull();
+
+export const updatedAt = () =>
+  timestampColumn('updated_at')
+    .$defaultFn(() => new Date())
+    .notNull();
+
+export const accessedAt = () =>
+  timestampColumn('accessed_at')
+    .$defaultFn(() => new Date())
+    .notNull();
 
 export const timestamps = {
   createdAt: createdAt(),

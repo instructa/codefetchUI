@@ -1,12 +1,8 @@
-import { drizzle } from "drizzle-orm/node-postgres"
-// https://orm.drizzle.team/docs/connect-neon
-// import { drizzle } from 'drizzle-orm/neon-http';
-import { Pool } from "pg"
+import { schema } from './schema';
 
-import * as schema from "./schema"
+// Re-export the drizzle-orm types and utilities from here for convenience
+export * from 'drizzle-orm';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-})
-
-export const db = drizzle(pool, { schema })
+// Re-export the feature schemas for use in other files
+export * from './schema/auth.schema'; // Export individual tables for drizzle-kit
+export * from './schema';
