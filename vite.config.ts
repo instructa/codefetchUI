@@ -15,7 +15,13 @@ export default defineConfig({
   build: {
     target: 'esnext',
     rollupOptions: {
-      external: ['node:async_hooks', 'cloudflare:workers'],
+      external: [
+        'node:async_hooks',
+        'cloudflare:workers',
+        'tanstack-start-manifest:v',
+        'tanstack-start-route-tree:v',
+        'tanstack-start-server-fn-manifest:v',
+      ],
     },
   },
   plugins: [
