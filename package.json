@@ -78,7 +78,6 @@
     "drizzle-orm": "^0.44.2",
     "fast-glob": "^3.3.3",
     "framer-motion": "^12.16.0",
-    "hono": "^4.8.4",
     "js-yaml": "^4.1.0",
     "lucide-react": "^0.513.0",
     "motion": "^12.16.0",

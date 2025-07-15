@@ -86,8 +86,7 @@ async function semanticSearch(
     obj: Match | Summary | { type: 'error'; message: string } | { type: 'warning'; msg: string }
   ) => void
 ) {
-  const env = context.cloudflare?.env;
-  if (!env?.AI) {
+  if (!context?.AI) {
     throw new Error('AI binding missing');
   }
 
@@ -96,7 +95,7 @@ async function semanticSearch(
 
   try {
     // 1. Generate embedding for the query
-    const queryEmbedding = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+    const queryEmbedding = await context.AI.run('@cf/baai/bge-base-en-v1.5', {
       text: [query],
     });
     const queryVector = queryEmbedding.data[0];
@@ -148,7 +147,7 @@ async function semanticSearch(
       const batch = files.slice(i, i + batchSize);
       const texts = batch.map((f) => f.content);
 
-      const embeddings = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+      const embeddings = await context.AI.run('@cf/baai/bge-base-en-v1.5', {
         text: texts,
       });
 

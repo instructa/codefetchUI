@@ -11,7 +11,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
 
     // Get rate limiter context (KV namespace in production)
     const rateLimiterContext: RateLimiterContext = {
-      RATE_LIMIT_KV: (context as any)?.cloudflare?.env?.CACHE,
+      RATE_LIMIT_KV: (context as any)?.CACHE,
     };
 
     // Security check 1: Validate Origin/Referer
@@ -67,7 +67,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
 
     try {
       // In Cloudflare Workers, always disable filesystem cache
-      const isWorkerEnvironment = (context as any)?.cloudflare?.env;
+      const isWorkerEnvironment = (context as any)?.AUTH_DB;
 
       // Get GitHub token from environment if available
       const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
@@ -150,7 +150,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         },
       });
 
-      const embedQueue = (context as any)?.cloudflare?.env?.EMBED_QUEUE;
+      const embedQueue = (context as any)?.EMBED_QUEUE;
       if (embedQueue) {
         // Send lightweight job – tree is already in memory.
         await embedQueue.send(JSON.stringify({ url: targetUrl, tree: codefetch.root }));
