@@ -28,7 +28,8 @@
     "deploy:prod": "bun ./alchemy.run.ts --stage prod",
     "deploy:destroy": "bun ./alchemy.run.ts --destroy",
     "deploy:read": "bun ./alchemy.run.ts --read",
-    "context:generate": "tsx scripts/generate-code-context.ts"
+    "context:generate": "tsx scripts/generate-code-context.ts",
+    "local-dev": "alchemy dev"
   },
   "dependencies": {
     "@better-fetch/fetch": "^1.1.18",

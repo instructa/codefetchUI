@@ -35,7 +35,6 @@ export default defineConfig({
       },
     }),
     viteReact(),
-    tailwindcss(),
   ],
   resolve: {
     alias: {

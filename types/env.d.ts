@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import type { ExecutionContext, IncomingRequestCfProperties } from '@cloudflare/workers-types';
-import type { worker } from '../alchemy.run.ts';
+import { worker } from '../alchemy.run.ts';
 
 export type CloudflareEnv = typeof worker.Env;
 
