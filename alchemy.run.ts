@@ -79,15 +79,17 @@ const cacheKV = await KVNamespace('cache', {
 });
 
 // Create D1 database for application data
-const database = await D1Database('main-db', {
+const mainDb = await D1Database('main-db', {
   name: `codefetch-ui-db-${app.stage}`,
   adopt: true,
+  migrationsDir: './drizzle/main',
 });
 
 // Analytics database for logging and metrics
 const analyticsDb = await D1Database('analytics', {
   name: `codefetch-ui-analytics-${app.stage}`,
   adopt: true,
+  migrationsDir: './drizzle/analytics',
 });
 
 // Queue for background tasks
@@ -99,6 +101,7 @@ const embedQueue = await Queue('embed-queue', {
 const authDb = await D1Database('auth-db', {
   name: `codefetch-auth-${app.stage}`,
   adopt: true,
+  migrationsDir: './drizzle/auth',
 });
 
 const aiLimit = await AiGateway('ai-rpm', {
@@ -155,6 +158,7 @@ const site = await TanStackStart('codefetch-ui', {
     SESSIONS: sessionsKV,
     CACHE: cacheKV,
     UPLOADS: uploadsBucket,
+    DATABASE: mainDb,
 
     // Rate-limit KV alias
     RATE_LIMIT_KV: cacheKV,
@@ -201,7 +205,7 @@ console.log(`  - State Bucket: ${stateBucket.name}`);
 console.log(`  - Uploads Bucket: ${uploadsBucket.name}`);
 console.log(`  - Sessions KV: ${sessionsKV.title}`);
 console.log(`  - Cache KV: ${cacheKV.title}`);
-console.log(`  - Main Database: ${database.name}`);
+console.log(`  - Main Database: ${mainDb.name}`);
 console.log(`  - Analytics Database: ${analyticsDb.name}`);
 console.log(`  - TanStack Start site: ${site.name}`);
 

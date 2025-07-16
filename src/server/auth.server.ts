@@ -3,12 +3,12 @@ import { betterAuth } from 'better-auth';
 import { withCloudflare } from 'better-auth-cloudflare';
 import { reactStartCookies } from 'better-auth/react-start';
 import { magicLink } from 'better-auth/plugins';
-import { getDb } from '~/db/db-config';
+import { getAuthDb } from '~/db/db-config';
 import { sendEmail } from './email';
 import type { CloudflareEnv } from '../../types/env';
 
 function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
-  const db = env ? getDb(env) : ({} as any);
+  const db = env ? getAuthDb(env) : ({} as any);
 
   const isProd = env?.NODE_ENV === 'production';
   const isEmailVerificationEnabled = env?.ENABLE_EMAIL_VERIFICATION === 'true';

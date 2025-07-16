@@ -59,3 +59,8 @@ alwaysApply: false
 
 4. **Version Awareness**
    • These rules assume Alchemy **0.46.0** or later. Keep package versions aligned with this major release.
+
+DONT SET MIGRATIONS TABLE
+const database = await D1Database('main-db', {
+  migrationsDir: './drizzle'
+});
