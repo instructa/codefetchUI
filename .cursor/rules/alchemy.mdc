@@ -1,0 +1,61 @@
+---
+globs: alchemy.run.ts
+alwaysApply: false
+---
+# Alchemy v0.46.0 Infrastructure Rules
+
+1. **State Stores**
+   • `DOStateStore`, `R2RestStateStore`, and `D1StateStore` are deprecated. Use `CloudflareStateStore` instead when you need a persistent store for application state.
+
+2. **Static Bindings Syntax**
+   • Helpers such as `DurableObjectNamespace`, `BrowserRendering`, etc. are now plain factory functions – **do not use the `new` keyword**.
+     ```ts
+     // ✅ Correct
+     const quotaDO = DurableObjectNamespace('QuotaDO', {
+       className: 'QuotaDO',
+       sqlite: true,
+     });
+
+     // ❌ Deprecated (v0.45 and earlier)
+     const quotaDO = new DurableObjectNamespace('QuotaDO', { /* … */ });
+     ```
+
+3. **Migration Guidance**
+   • When updating or creating infrastructure code, search for `new DurableObjectNamespace` or deprecated state-store helpers and migrate them to the new factory-function style.
+
+4. **Version Awareness**
+   • These rules assume Alchemy **0.46.0** or later. Keep package versions aligned with this major release.
+
+   • When updating or creating infrastructure code, search for `new DurableObjectNamespace` or deprecated state-store helpers and migrate them to the new factory-function style.
+
+4. **Version Awareness**
+   • These rules assume Alchemy **0.46.0** or later. Keep package versions aligned with this major release.
+
+# Alchemy v0.46.0 Infrastructure Rules
+
+1. **State Stores**
+   • `DOStateStore`, `R2RestStateStore`, and `D1StateStore` are deprecated. Use `CloudflareStateStore` instead when you need a persistent store for application state.
+
+2. **Static Bindings Syntax**
+   • Helpers such as `DurableObjectNamespace`, `BrowserRendering`, etc. are now plain factory functions – **do not use the `new` keyword**.
+     ```ts
+     // ✅ Correct
+     const quotaDO = DurableObjectNamespace('QuotaDO', {
+       className: 'QuotaDO',
+       sqlite: true,
+     });
+
+     // ❌ Deprecated (v0.45 and earlier)
+     const quotaDO = new DurableObjectNamespace('QuotaDO', { /* … */ });
+     ```
+
+3. **Migration Guidance**
+   • When updating or creating infrastructure code, search for `new DurableObjectNamespace` or deprecated state-store helpers and migrate them to the new factory-function style.
+
+4. **Version Awareness**
+   • These rules assume Alchemy **0.46.0** or later. Keep package versions aligned with this major release.
+
+   • When updating or creating infrastructure code, search for `new DurableObjectNamespace` or deprecated state-store helpers and migrate them to the new factory-function style.
+
+4. **Version Awareness**
+   • These rules assume Alchemy **0.46.0** or later. Keep package versions aligned with this major release.

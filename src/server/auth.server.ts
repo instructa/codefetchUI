@@ -1,19 +1,14 @@
 import type { IncomingRequestCfProperties } from '@cloudflare/workers-types';
 import { betterAuth } from 'better-auth';
 import { withCloudflare } from 'better-auth-cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { reactStartCookies } from 'better-auth/react-start';
 import { magicLink } from 'better-auth/plugins';
-import { schema } from '~/db/schema';
+import { getDb } from '~/db/db-config';
 import { sendEmail } from './email';
 import type { CloudflareEnv } from '../../types/env';
 
-// Create an auth instance for the Cloudflare runtime.
-// Pass your Worker "env" and (optionally) the Cloudflare Request.cf object
-// to get full geolocation/IP awareness.
 function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
-  // Initialise the D1 database only when an Env is provided (runtime).
-  const db = env ? drizzle(env.AUTH_DB, { schema }) : ({} as any);
+  const db = env ? getDb(env) : ({} as any);
 
   const isProd = env?.NODE_ENV === 'production';
   const isEmailVerificationEnabled = env?.ENABLE_EMAIL_VERIFICATION === 'true';
@@ -38,7 +33,7 @@ function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
               },
             }
           : undefined,
-        kv: env?.SESSIONS,
+        kv: env?.SESSIONS as any,
       },
       {
         emailAndPassword: {

@@ -7,7 +7,6 @@ import {
   Queue,
   DurableObjectNamespace,
   AiGateway,
-  Worker,
   Ai,
 } from 'alchemy/cloudflare';
 // Vectorize might need to be imported separately or might not be available yet
@@ -108,7 +107,7 @@ const aiLimit = await AiGateway('ai-rpm', {
   rateLimitingTechnique: 'sliding',
 });
 
-const quotaDO = new DurableObjectNamespace('QuotaDO', {
+const quotaDO = DurableObjectNamespace('QuotaDO', {
   className: 'QuotaDO',
   sqlite: true,
 });
@@ -181,16 +180,17 @@ const site = await TanStackStart('codefetch-ui', {
 export { site as worker };
 
 // Deploy the embed worker separately
-const embedWorker = await Worker('embed-worker', {
-  name: `codefetch-embed-worker-${app.stage}`,
-  script: './src/cloudflare/workers/embed.worker.ts',
-  bindings: {
-    EMBED_QUEUE: embedQueue,
-    // Add any other bindings the embed worker needs
-    // CF_VECTORIZE_INDEX: vectorizeIndex, // When Vectorize is available
-    // CF_AI_MODEL: 'text-embedding-ada-002', // Or whatever model you're using
-  },
-});
+// TODO: Uncomment when Vectorize is available and configured
+// const embedWorker = await Worker('embed-worker', {
+//   name: `codefetch-embed-worker-${app.stage}`,
+//   script: './src/cloudflare/workers/embed.worker.ts',
+//   bindings: {
+//     EMBED_QUEUE: embedQueue,
+//     // Add any other bindings the embed worker needs
+//     // CF_VECTORIZE_INDEX: vectorizeIndex, // When Vectorize is available
+//     // CF_AI_MODEL: 'text-embedding-ada-002', // Or whatever model you're using
+//   },
+// });
 
 // Clean up orphaned resources
 await app.finalize();
@@ -204,7 +204,6 @@ console.log(`  - Cache KV: ${cacheKV.title}`);
 console.log(`  - Main Database: ${database.name}`);
 console.log(`  - Analytics Database: ${analyticsDb.name}`);
 console.log(`  - TanStack Start site: ${site.name}`);
-console.log(`  - Embed Worker: ${embedWorker.name}`);
 
 if (site.url) {
   console.log(`\n🌐 Site deployed at: ${site.url}`);

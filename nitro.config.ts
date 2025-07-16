@@ -1,7 +1,7 @@
-import { defineNitroConfig } from 'nitropack/config';
+import { defineNitroConfig } from 'nitro/config';
 
 export default defineNitroConfig({
-  preset: 'cloudflare',
+  preset: 'cloudflare_module',
   rollupConfig: {
     external: [
       'node:async_hooks',
