@@ -4,10 +4,10 @@
  * Extra options are kept for API compatibility but are currently ignored.
  */
 import type { IncomingRequestCfProperties } from '@cloudflare/workers-types';
-import type { KVNamespace, D1Database } from '@cloudflare/workers-types';
+import type { KVNamespace } from '@cloudflare/workers-types';
 import type { BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { drizzle } from 'drizzle-orm/d1';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { schema } from '~/db/schema';
 
 export interface CloudflareAdapterEnv {
@@ -15,7 +15,7 @@ export interface CloudflareAdapterEnv {
   kv?: KVNamespace;
   /** Cloudflare D1 database with optional Drizzle options */
   d1?: {
-    db: D1Database;
+    db: DrizzleD1Database<typeof schema> | any; // Already initialized Drizzle instance from getAuthDb
     options?: {
       /** Whether Drizzle should pluralise table names (passed through) */
       usePlural?: boolean;
@@ -34,8 +34,12 @@ export interface CloudflareAdapterEnv {
  * Drop-in replacement for `withCloudflare`.
  *
  * ```ts
+ * const db = getAuthDb(env); // Get initialized Drizzle instance
  * betterAuth({
- *   ...withCloudflare({ kv, d1 }),
+ *   ...withCloudflare({ 
+ *     kv: env.SESSIONS,
+ *     d1: { db, options: { usePlural: true } }
+ *   }),
  *   // other BetterAuth options…
  * })
  * ```
@@ -48,14 +52,8 @@ export function withCloudflare(
 
   // Set up database if D1 is provided
   if (env.d1) {
-    // Create a Drizzle instance for D1
-    const db = drizzle(env.d1.db, {
-      schema,
-      logger: env.d1.options?.debugLogs,
-    });
-
-    // Use the drizzle adapter from better-auth
-    authOptions.database = drizzleAdapter(db, {
+    // The db is already a Drizzle instance from getAuthDb(), so we use it directly
+    authOptions.database = drizzleAdapter(env.d1.db, {
       provider: 'sqlite', // D1 is SQLite-based
       usePlural: env.d1.options?.usePlural,
     });
