@@ -1,3 +1,6 @@
+// import { AuthQueryProvider } from '@daveyplate/better-auth-tanstack';
+// import { AuthUIProviderTanstack } from '@daveyplate/better-auth-ui/tanstack';
+// Root route file
 import type { QueryClient } from '@tanstack/react-query';
 import {
   HeadContent,
@@ -11,6 +14,7 @@ import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary';
 import { NotFound } from '~/components/NotFound';
 import { ThemeInitScript } from '~/components/theme-init-script';
 import { ThemeProvider } from '~/components/theme-provider';
+import { authClient } from '~/lib/auth-client';
 import { getTheme } from '~/lib/theme';
 import type { Theme } from '~/lib/theme';
 import { seo } from '~/utils/seo';
@@ -86,6 +90,7 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const initial = Route.useLoaderData() as Theme;
+  const router = useRouter();
 
   return (
     <html lang="en" className={initial === 'system' ? '' : initial} suppressHydrationWarning>

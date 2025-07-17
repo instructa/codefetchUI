@@ -35,7 +35,7 @@ npm
 pnpm
 yarn
 Terminal window
-bun alchemy dev
+pnpm alchemy dev
 
 This starts Alchemy in development mode, which will:
 
@@ -49,8 +49,8 @@ npm
 pnpm
 yarn
 Terminal window
-# Using Alchemy CLI with bun
-bun alchemy dev
+# Using Alchemy CLI with pnpm
+pnpm alchemy dev
 
 For more CLI options and commands, see the CLI documentation.
 
@@ -90,7 +90,7 @@ npm
 pnpm
 yarn
 Terminal window
-bun vite dev
+pnpm vite dev
 
 Vite Integration
 For projects using Vite, Alchemy integrates with the Cloudflare Vite plugin to provide enhanced local development capabilities. This integration enables better support for certain binding types when running locally.

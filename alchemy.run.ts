@@ -110,10 +110,10 @@ const aiLimit = await AiGateway('ai-rpm', {
   rateLimitingTechnique: 'sliding',
 });
 
-const quotaDO = DurableObjectNamespace('QuotaDO', {
-  className: 'QuotaDO',
-  sqlite: true,
-});
+// const quotaDO = DurableObjectNamespace('QuotaDO', {
+//   className: 'QuotaDO',
+//   sqlite: true,
+// });
 
 // Prepare encrypted secrets for the worker
 const secrets = {
@@ -150,7 +150,10 @@ const secrets = {
 
 const site = await TanStackStart('codefetch-ui', {
   // Build command – override if you have a custom one
-  command: 'pnpm run build',
+  command: 'vite build',
+  dev: {
+    command: 'vite dev',
+  },
 
   // Make all previously-created resources available to the app
   bindings: {
@@ -176,7 +179,7 @@ const site = await TanStackStart('codefetch-ui', {
 
     // Custom bindings used by our server routes
     AI_RATELIMIT: aiLimit,
-    QUOTA_DO: quotaDO,
+    // QUOTA_DO: quotaDO,
     AI_GATEWAY_URL: alchemy.secret(process.env.AI_GATEWAY_URL || 'https://gw.example.ai'),
   },
 });
@@ -211,6 +214,4 @@ console.log(`  - TanStack Start site: ${site.name}`);
 
 if (site.url) {
   console.log(`\n🌐 Site deployed at: ${site.url}`);
-  console.log(`\n🧪 Test your API:`);
-  console.log(`  curl "${site.url}/api/scrape?url=https://github.com/facebook/react"`);
 }
