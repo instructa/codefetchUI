@@ -135,6 +135,8 @@ const secrets = {
   GOOGLE_CLIENT_ID: alchemy.secret(process.env.GOOGLE_CLIENT_ID || ''),
   GOOGLE_CLIENT_SECRET: alchemy.secret(process.env.GOOGLE_CLIENT_SECRET || ''),
 
+  NODE_ENV: alchemy.secret(app.stage === 'prod' ? 'production' : 'development'),
+
   // CodeFetch SDK
   CODEFETCH_API_KEY: alchemy.secret(process.env.CODEFETCH_API_KEY || ''),
 
@@ -147,7 +149,7 @@ const secrets = {
 
 const site = await TanStackStart('codefetch-ui', {
   // Build command – override if you have a custom one
-  // command: 'NODE_ENV=production vite build',
+  //command: 'NODE_ENV=production vite build',
   // dev: {
   //   command: 'vite dev',
   // },

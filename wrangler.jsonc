@@ -7,49 +7,48 @@
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
-      "id": "7c27c5c5f1fc46cda49db46655d7a71b",
-      "preview_id": "7c27c5c5f1fc46cda49db46655d7a71b"
+      "id": "67e50c09506d4b26b967f9c71d436869",
+      "preview_id": "67e50c09506d4b26b967f9c71d436869"
     },
     {
       "binding": "CACHE",
-      "id": "3c3b99ba95514126a970ee537adba1df",
-      "preview_id": "3c3b99ba95514126a970ee537adba1df"
+      "id": "48b0e2c848d249dfa426c583d43c2ce0",
+      "preview_id": "48b0e2c848d249dfa426c583d43c2ce0"
     },
     {
       "binding": "RATE_LIMIT_KV",
-      "id": "3c3b99ba95514126a970ee537adba1df",
-      "preview_id": "3c3b99ba95514126a970ee537adba1df"
+      "id": "48b0e2c848d249dfa426c583d43c2ce0",
+      "preview_id": "48b0e2c848d249dfa426c583d43c2ce0"
     }
   ],
   "r2_buckets": [
     {
       "binding": "UPLOADS",
-      "bucket_name": "codefetch-ui-uploads-dev",
-      "preview_bucket_name": "codefetch-ui-uploads-dev"
+      "bucket_name": "codefetch-ui-uploads-production",
+      "preview_bucket_name": "codefetch-ui-uploads-production"
     }
   ],
   "d1_databases": [
     {
       "binding": "DATABASE",
-      "database_id": "cb0de5a2-2ada-435f-b07c-801a952141a1",
-      "database_name": "codefetch-ui-db-dev",
+      "database_id": "2001adda-8663-4c88-9b86-cd7740ec5e13",
+      "database_name": "codefetch-ui-db-production",
       "migrations_dir": "./drizzle/main",
-      "preview_database_id": "cb0de5a2-2ada-435f-b07c-801a952141a1"
+      "preview_database_id": "2001adda-8663-4c88-9b86-cd7740ec5e13"
     },
     {
       "binding": "ANALYTICS",
-      "database_id": "25c8a257-edbd-45f6-af32-5d0cc640a29f",
-      "database_name": "codefetch-ui-analytics-dev",
+      "database_id": "7bf66e23-65c6-4c94-964f-84cf140c7cce",
+      "database_name": "codefetch-ui-analytics-production",
       "migrations_dir": "./drizzle/analytics",
-      "preview_database_id": "25c8a257-edbd-45f6-af32-5d0cc640a29f"
+      "preview_database_id": "7bf66e23-65c6-4c94-964f-84cf140c7cce"
     },
     {
       "binding": "AUTH_DB",
-      "database_id": "3ed48fba-261f-402c-a156-d8856fe2b9f1",
-      "database_name": "codefetch-auth-dev",
+      "database_id": "0b477c41-be8c-45dd-aaac-025457822bfd",
+      "database_name": "codefetch-auth-production",
       "migrations_dir": "./drizzle/auth",
-      "preview_database_id": "3ed48fba-261f-402c-a156-d8856fe2b9f1"
+      "preview_database_id": "0b477c41-be8c-45dd-aaac-025457822bfd"
     }
-  ],
-  "vars": { "NODE_ENV": "production" }
+  ]
 }
