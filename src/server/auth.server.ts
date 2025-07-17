@@ -132,12 +132,8 @@ function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
   return authConfig;
 }
 
-// For local tooling & schema generation (no Env available)
-export const auth = createAuth();
-
-// Export factory for runtime usage
+// Export only the createAuth function - no static instance
 export { createAuth };
-export default auth;
 
 // Helper function to get session from request
 export async function getSession(request: Request, env: CloudflareEnv) {

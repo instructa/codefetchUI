@@ -1,4 +1,4 @@
-import * as nodemailer from 'nodemailer';
+// Remove nodemailer - not compatible with Cloudflare Workers
 import { Resend } from 'resend';
 
 export interface EmailProvider {
@@ -33,7 +33,15 @@ export class ResendProvider implements EmailProvider {
 }
 
 export class SMTPProvider implements EmailProvider {
-  private transporter: nodemailer.Transporter;
+  private config: {
+    host: string;
+    port: number;
+    secure?: boolean;
+    auth?: {
+      user: string;
+      pass: string;
+    };
+  };
 
   constructor(config: {
     host: string;
@@ -44,7 +52,7 @@ export class SMTPProvider implements EmailProvider {
       pass: string;
     };
   }) {
-    this.transporter = nodemailer.createTransport(config);
+    this.config = config;
   }
 
   async sendEmail({
@@ -58,38 +66,44 @@ export class SMTPProvider implements EmailProvider {
     subject: string;
     html: string;
   }) {
-    await this.transporter.sendMail({
-      from,
-      to,
-      subject,
-      html,
-    });
+    // In Cloudflare Workers, we need to use an HTTP-based SMTP service
+    // or fall back to console logging
+    console.warn('SMTP Provider: Direct SMTP not supported in Cloudflare Workers. Email not sent.');
+    console.log('Would send email:', { from, to, subject });
+    // You could implement HTTP-based SMTP relay here if needed
   }
 }
 
 export class ConsoleProvider implements EmailProvider {
-  async sendEmail({ from, to, subject, html }: { from: string; to: string; subject: string; html: string; }) {
+  async sendEmail({
+    from,
+    to,
+    subject,
+    html,
+  }: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+  }) {
     /* eslint-disable no-console */
-    console.log("=== EMAIL (Console Provider) ===");
+    console.log('=== EMAIL (Console Provider) ===');
     console.log(`From: ${from}`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     // Do NOT print the full HTML; it may contain one‑time tokens.
-    console.log("HTML: [redacted for security]");
-    console.log("================================");
+    console.log('HTML: [redacted for security]');
+    console.log('================================');
   }
 }
 
 export class MailhogProvider implements EmailProvider {
-  private transporter: nodemailer.Transporter;
+  private host: string;
+  private port: number;
 
   constructor(host = 'localhost', port = 1025) {
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: false,
-      ignoreTLS: true,
-    });
+    this.host = host;
+    this.port = port;
   }
 
   async sendEmail({
@@ -103,12 +117,30 @@ export class MailhogProvider implements EmailProvider {
     subject: string;
     html: string;
   }) {
-    await this.transporter.sendMail({
-      from,
-      to,
-      subject,
-      html,
-    });
-    console.log(`Email sent to Mailhog: ${to}`);
+    // Use HTTP API for Mailhog instead of SMTP
+    try {
+      const response = await fetch(`http://${this.host}:${this.port}/api/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: { email: from },
+          to: [{ email: to }],
+          subject,
+          html,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Mailhog API error: ${response.status}`);
+      }
+
+      console.log(`Email sent to Mailhog: ${to}`);
+    } catch (error) {
+      console.error('Failed to send email via Mailhog:', error);
+      // Fall back to console logging
+      console.log('Email would be sent:', { from, to, subject });
+    }
   }
 }

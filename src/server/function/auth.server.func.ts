@@ -1,20 +1,21 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getWebRequest } from '@tanstack/react-start/server';
-import { createAuth, auth } from '../auth.server';
+import { createAuth } from '../auth.server';
 import type { CloudflareEnv } from '../../../types/env';
 
 /**
  * Server function to get the current session.
  * This integrates with TanStack Start and properly handles Cloudflare environments.
  */
-export const getSession = createServerFn({ method: 'GET' }).handler(async () => {
+export const getSession = createServerFn({ method: 'GET' }).handler(async ({ context }) => {
   try {
     const { headers } = getWebRequest();
-    
-    // Use the default auth instance for now
-    // In production, this would be updated to get env from the request context
-    // when TanStack Start provides better Cloudflare integration
-    const session = await auth.api.getSession({
+
+    // Get env from context when running on Cloudflare
+    const env = context as CloudflareEnv;
+    const authInstance = createAuth(env);
+
+    const session = await authInstance.api.getSession({
       headers,
     });
 
@@ -38,20 +39,23 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async () => 
 });
 
 /**
- * Server function to sign out.
- * Clears the session and authentication cookies.
+ * Server function to sign out the user
  */
-export const signOut = createServerFn({ method: 'POST' }).handler(async () => {
+export const signOut = createServerFn({ method: 'POST' }).handler(async ({ context }) => {
   try {
     const { headers } = getWebRequest();
-    
-    await auth.api.signOut({
+
+    // Get env from context when running on Cloudflare
+    const env = context as CloudflareEnv;
+    const authInstance = createAuth(env);
+
+    await authInstance.api.signOut({
       headers,
     });
-    
+
     return { success: true };
   } catch (error) {
     console.error('Sign out failed:', error);
-    return { success: false, error: 'Failed to sign out' };
+    return { success: false };
   }
 });
