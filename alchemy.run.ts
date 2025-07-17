@@ -155,6 +155,8 @@ const site = await TanStackStart('codefetch-ui', {
     command: 'vite dev',
   },
 
+  noBundle: true,
+
   // Make all previously-created resources available to the app
   bindings: {
     // Storage (KV and R2)
