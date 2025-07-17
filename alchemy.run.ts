@@ -138,6 +138,9 @@ const secrets = {
   // CodeFetch SDK
   CODEFETCH_API_KEY: alchemy.secret(process.env.CODEFETCH_API_KEY || ''),
 
+  // GitHub API Token for scraping
+  GITHUB_TOKEN: alchemy.secret(process.env.GITHUB_TOKEN || ''),
+
   // Environment
   NODE_ENV: alchemy.secret(app.stage === 'prod' ? 'production' : 'development'),
 
@@ -153,6 +156,7 @@ const site = await TanStackStart('codefetch-ui', {
   command: 'NODE_ENV=production vite build',
   dev: {
     command: 'vite dev',
+    url: 'http://localhost:3000',
   },
 
   noBundle: true,

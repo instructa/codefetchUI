@@ -1,7 +1,6 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
 import { chooseEngine, type SearchEngine } from '~/utils/engine-select';
 import { getRepoData } from '~/server/repo-storage';
-import { parse } from '@ast-grep/napi';
 
 interface Match {
   type: 'match';
@@ -12,16 +11,51 @@ interface Match {
   origin: 'semantic' | 'ast';
 }
 
-interface Metadata {
-  type: 'metadata';
-  engine: SearchEngine;
-  rule?: string;
-}
-
 interface Summary {
   type: 'summary';
   totalFiles: number;
   totalMatches: number;
+}
+
+interface Metadata {
+  type: 'metadata';
+  engine: string;
+  rule?: string;
+}
+
+// Helper function to calculate cosine similarity
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// Helper to get language from file extension
+function getLang(filepath: string): string {
+  const ext = filepath.split('.').pop()?.toLowerCase() || '';
+  const langMap: Record<string, string> = {
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    java: 'java',
+    cpp: 'cpp',
+    c: 'c',
+    cs: 'csharp',
+    rb: 'ruby',
+    go: 'go',
+    rs: 'rust',
+    php: 'php',
+    swift: 'swift',
+  };
+  return langMap[ext] || 'text';
 }
 
 export const ServerRoute = createServerFileRoute('/api/search' as any).methods({
@@ -198,7 +232,7 @@ async function semanticSearch(
   }
 }
 
-/* ---------- AST Search Implementation ---------- */
+/* ---------- Simplified AST Search Implementation ---------- */
 async function astSearch(
   prompt: string,
   repoUrl: string,
@@ -215,13 +249,36 @@ async function astSearch(
   const repoData = await getRepoData(repoUrl);
   if (!repoData) throw new Error('Repo not scraped yet');
 
-  // Normalise rule or derive from prompt
-  const { normaliseRule } = await import('~/utils/pattern-guard');
-  const ruleObj = normaliseRule(prompt);
-  const pattern = ruleObj.pattern;
-  const allowedLangs = ruleObj.languages;
+  // Simplified pattern matching without ast-grep
+  const searchPatterns: Record<string, RegExp[]> = {
+    function: [/function\s+\w+\s*\(/g, /const\s+\w+\s*=\s*\(/g, /=>\s*\{/g],
+    class: [/class\s+\w+/g, /export\s+class\s+\w+/g],
+    import: [/import\s+.*\s+from/g, /require\s*\(/g],
+    export: [/export\s+/g],
+    async: [/async\s+function/g, /async\s+\(/g, /async\s+=>/g],
+  };
 
-  emit({ type: 'metadata', engine: 'ast', rule: pattern } as Metadata);
+  // Try to match prompt with pattern types
+  let patterns: RegExp[] = [];
+  const lowerPrompt = prompt.toLowerCase();
+
+  for (const [key, regexes] of Object.entries(searchPatterns)) {
+    if (lowerPrompt.includes(key)) {
+      patterns = regexes;
+      break;
+    }
+  }
+
+  // Default to searching for the prompt as literal text
+  if (patterns.length === 0) {
+    try {
+      patterns = [new RegExp(prompt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')];
+    } catch {
+      patterns = [];
+    }
+  }
+
+  emit({ type: 'metadata', engine: 'ast', rule: prompt } as Metadata);
 
   let totalMatches = 0;
   let totalFiles = 0;
@@ -232,24 +289,36 @@ async function astSearch(
 
     if (node.type === 'file' && node.content) {
       totalFiles++;
-      const lang = getLang(fullPath);
-      if (allowedLangs && !allowedLangs.includes(lang)) return;
 
-      const sg = parse(lang, node.content);
-      sg.root()
-        .findAll(pattern)
-        .forEach((n) => {
-          const range: any = n.range();
-          emit({
-            type: 'match',
-            file: fullPath,
-            lines: [range.start.line + 1, range.end.line + 1],
-            snippet: n.text(),
-            score: 1,
-            origin: 'ast',
-          } as Match);
-          totalMatches++;
-        });
+      for (const pattern of patterns) {
+        const matches = [...(node.content.matchAll(pattern) || [])];
+
+        for (const match of matches) {
+          if (match.index !== undefined) {
+            // Find line numbers
+            const lines = node.content.substring(0, match.index).split('\n');
+            const startLine = lines.length;
+            const matchLines = match[0].split('\n').length;
+            const endLine = startLine + matchLines - 1;
+
+            // Extract snippet with context
+            const allLines = node.content.split('\n');
+            const contextStart = Math.max(0, startLine - 2);
+            const contextEnd = Math.min(allLines.length - 1, endLine + 2);
+            const snippet = allLines.slice(contextStart, contextEnd + 1).join('\n');
+
+            emit({
+              type: 'match',
+              file: fullPath,
+              lines: [startLine, endLine],
+              snippet: snippet,
+              score: 1,
+              origin: 'ast',
+            } as Match);
+            totalMatches++;
+          }
+        }
+      }
     } else if (node.children) {
       for (const child of node.children) await processFile(child, fullPath);
     }
@@ -259,45 +328,16 @@ async function astSearch(
     await processFile(repoData.root, '');
   } catch (err) {
     const msg = (err as Error).message ?? 'unknown error';
-    emit({ type: 'warning', msg: 'ast-grep failed – fallback results shown' });
+    emit({ type: 'warning', msg: 'Pattern search failed – fallback results shown' });
 
     const { logSearchError } = await import('~/server/analytics');
     await logSearchError(context.cloudflare?.env, {
       repo: repoUrl,
       engine: 'ast',
-      pattern,
+      pattern: prompt,
       error: msg,
     });
   }
 
   emit({ type: 'summary', totalFiles, totalMatches } as Summary);
-}
-
-// Helper function to calculate cosine similarity
-function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    normA += vecA[i] * vecA[i];
-    normB += vecB[i] * vecB[i];
-  }
-
-  normA = Math.sqrt(normA);
-  normB = Math.sqrt(normB);
-
-  if (normA === 0 || normB === 0) {
-    return 0;
-  }
-
-  return dotProduct / (normA * normB);
-}
-
-function getLang(p: string): string {
-  const ext = p.split('.').pop()?.toLowerCase() || '';
-  if (ext === 'ts' || ext === 'tsx') return 'typescript';
-  if (ext === 'js' || ext === 'jsx' || ext === 'mjs' || ext === 'cjs') return 'javascript';
-  return 'javascript';
 }

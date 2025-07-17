@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as yaml from 'js-yaml';
 import { validateRule as validateAstGrepRule } from './pattern-guard';
 
 // Types for ast-grep AI functionality
@@ -508,6 +507,70 @@ export function findMatchingTemplate(prompt: string): RuleTemplate | null {
   return null;
 }
 
+// Simple YAML parser for specific use case
+function parseSimpleYaml(yamlContent: string): any {
+  const lines = yamlContent.split('\n');
+  const result: any = {};
+  let currentKey: string | null = null;
+  let currentIndent = 0;
+  let currentObject: any = result;
+  const stack: { obj: any; indent: number }[] = [{ obj: result, indent: 0 }];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const indent = line.length - line.trimStart().length;
+
+    // Handle key-value pairs
+    if (trimmed.includes(':')) {
+      const colonIndex = trimmed.indexOf(':');
+      const key = trimmed.substring(0, colonIndex).trim();
+      const value = trimmed.substring(colonIndex + 1).trim();
+
+      // Pop stack to find correct parent
+      while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+        stack.pop();
+      }
+      currentObject = stack[stack.length - 1].obj;
+
+      if (value) {
+        // Simple value
+        if (value.startsWith('[') && value.endsWith(']')) {
+          // Array
+          currentObject[key] = value
+            .slice(1, -1)
+            .split(',')
+            .map((v) => v.trim())
+            .filter((v) => v);
+        } else if (value.startsWith('"') && value.endsWith('"')) {
+          // Quoted string
+          currentObject[key] = value.slice(1, -1);
+        } else {
+          // Unquoted string
+          currentObject[key] = value;
+        }
+      } else {
+        // Nested object
+        currentObject[key] = {};
+        stack.push({ obj: currentObject[key], indent });
+        currentObject = currentObject[key];
+      }
+    } else if (trimmed.startsWith('-')) {
+      // Array item (simplified handling)
+      const value = trimmed.substring(1).trim();
+      const parentKey = Object.keys(currentObject).pop();
+      if (parentKey && !Array.isArray(currentObject[parentKey])) {
+        currentObject[parentKey] = [value];
+      } else if (parentKey && Array.isArray(currentObject[parentKey])) {
+        currentObject[parentKey].push(value);
+      }
+    }
+  }
+
+  return result;
+}
+
 export async function generateAiContext(scrapedData: any): Promise<string> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error('Gemini API key required');
@@ -754,13 +817,7 @@ Respond with ONLY the YAML rule, no additional explanation.`;
     // Use proper YAML parser instead of manual parsing
     let parsedYaml: any;
     try {
-      parsedYaml = yaml.load(yamlContent) as {
-        rule?: any;
-        pattern?: string;
-        kind?: string;
-        languages?: string[];
-        suggestedPaths?: string[];
-      };
+      parsedYaml = parseSimpleYaml(yamlContent);
     } catch (yamlError) {
       console.error('Failed to parse YAML:', yamlError);
       // Use path-based fallback for YAML parse errors

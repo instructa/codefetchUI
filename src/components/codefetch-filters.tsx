@@ -7,7 +7,7 @@ import {
 } from '~/lib/stores/codefetch-filters.store';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import { usePreviewGenerator } from '~/hooks/use-preview-generator';
-import type { TokenEncoder } from 'codefetch-sdk';
+import type { TokenEncoder } from '~/lib/stores/codefetch-filters.store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Label } from '~/components/ui/label';
 import { Input } from '~/components/ui/input';

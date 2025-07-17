@@ -1,10 +1,6 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
-import { parse } from '@ast-grep/napi';
-import * as path from 'path';
 import { getRepoData } from '~/server/repo-storage';
-// <add import>
 import { normaliseRule } from '~/utils/pattern-guard';
-// </add>
 
 interface ContextItem {
   file: string;
@@ -22,10 +18,32 @@ interface AiTransformResult {
   rule: {
     pattern: string;
     languages?: string[];
-    kind?: string;
   };
+  intent: 'search' | 'add' | 'modify';
   suggestedPaths?: string[];
-  intent: 'refactor' | 'debug' | 'add' | 'find' | 'other';
+}
+
+function getLanguageFromFile(fileName: string): string | null {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const langMap: Record<string, string> = {
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    mjs: 'javascript',
+    cjs: 'javascript',
+    py: 'python',
+    java: 'java',
+    cpp: 'cpp',
+    c: 'c',
+    cs: 'csharp',
+    rb: 'ruby',
+    go: 'go',
+    rs: 'rust',
+    php: 'php',
+    swift: 'swift',
+  };
+  return langMap[ext || ''] || null;
 }
 
 async function generateAstGrepRule(prompt: string): Promise<GeneratedRule | null> {
@@ -47,39 +65,39 @@ async function generateAstGrepRule(prompt: string): Promise<GeneratedRule | null
 
   const patterns: Record<string, GeneratedRule> = {
     'async function': {
-      pattern: 'async function $FUNC($$$ARGS) { $$$BODY }',
+      pattern: 'async function',
       language: ['javascript', 'typescript'],
     },
     'react component': {
-      pattern: 'function $COMPONENT($$$ARGS) { $$$BODY return $JSX }',
+      pattern: 'function.*return.*<',
       language: ['javascript', 'typescript'],
     },
     usestate: {
-      pattern: 'const [$STATE, $SETTER] = useState($$$)',
+      pattern: 'useState\\(',
       language: ['javascript', 'typescript'],
     },
     'api route': {
-      pattern: 'router.$METHOD($PATH, $$$)',
+      pattern: 'router\\.',
       language: ['javascript', 'typescript'],
     },
     class: {
-      pattern: 'class $CLASS { $$$BODY }',
+      pattern: 'class\\s+\\w+',
       language: ['javascript', 'typescript'],
     },
     import: {
-      pattern: 'import $$$IMPORTS from $MODULE',
+      pattern: 'import.*from',
       language: ['javascript', 'typescript'],
     },
     export: {
-      pattern: 'export $$$DECL',
+      pattern: 'export',
       language: ['javascript', 'typescript'],
     },
     'arrow function': {
-      pattern: 'const $FUNC = ($$$ARGS) => $BODY',
+      pattern: '=>',
       language: ['javascript', 'typescript'],
     },
     'try catch': {
-      pattern: 'try { $$$TRY } catch ($ERR) { $$$CATCH }',
+      pattern: 'try\\s*\\{',
       language: ['javascript', 'typescript'],
     },
   };
@@ -93,27 +111,11 @@ async function generateAstGrepRule(prompt: string): Promise<GeneratedRule | null
     }
   }
 
-  // Default pattern if no match - extract keywords and search for them
-  const words = lowerPrompt.split(/\s+/).filter((word) => word.length > 2);
-  const keyword = words.find((w) => !['want', 'need', 'find', 'show', 'get'].includes(w)) || 'code';
-
+  // Default pattern: search for the prompt as literal text
   return {
-    pattern: keyword, // Search for the keyword as a literal string
-    language: ['javascript', 'typescript'],
+    pattern: prompt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    language: ['javascript', 'typescript', 'python', 'go', 'rust'],
   };
-}
-
-function getLanguageFromFile(filePath: string): string | null {
-  const ext = path.extname(filePath).toLowerCase();
-  const langMap: Record<string, string> = {
-    '.ts': 'typescript',
-    '.tsx': 'typescript',
-    '.js': 'javascript',
-    '.jsx': 'javascript',
-    '.mjs': 'javascript',
-    '.cjs': 'javascript',
-  };
-  return langMap[ext] || null;
 }
 
 async function processRepoFileWithPattern(
@@ -132,21 +134,32 @@ async function processRepoFileWithPattern(
 
     if (language && (!allowedLanguages || allowedLanguages.includes(language))) {
       try {
-        // Parse the file content with ast-grep
-        const sg = parse(language, file.content);
-        const root = sg.root();
-        const nodes = root.findAll(pattern);
+        // Use regex pattern matching instead of ast-grep
+        const regex = new RegExp(pattern, 'gmi');
+        const allMatches = [...(file.content.matchAll(regex) || [])];
 
-        for (const node of nodes) {
-          const range = node.range();
-          // ast-grep uses 'line' property, not 'row'
-          const match: ContextItem = {
-            file: fullPath,
-            lines: [(range.start as any).line + 1, (range.end as any).line + 1],
-            snippet: node.text(),
-            score: 1,
-          };
-          matches.push(match);
+        for (const match of allMatches) {
+          if (match.index !== undefined) {
+            // Find line numbers
+            const lines = file.content.substring(0, match.index).split('\n');
+            const startLine = lines.length;
+            const matchLines = match[0].split('\n').length;
+            const endLine = startLine + matchLines - 1;
+
+            // Extract snippet with context
+            const allLines = file.content.split('\n');
+            const contextStart = Math.max(0, startLine - 3);
+            const contextEnd = Math.min(allLines.length - 1, endLine + 2);
+            const snippet = allLines.slice(contextStart, contextEnd + 1).join('\n');
+
+            const contextItem: ContextItem = {
+              file: fullPath,
+              lines: [startLine, endLine],
+              snippet: snippet,
+              score: 1,
+            };
+            matches.push(contextItem);
+          }
         }
       } catch (error) {
         console.error(`Error processing file ${fullPath}:`, error);
@@ -213,15 +226,10 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
       const rule = await generateAstGrepRule(prompt);
 
       if (!rule) {
-        return Response.json(
-          { error: 'Failed to generate ast-grep rule from prompt.' },
-          { status: 500 }
-        );
+        return Response.json({ error: 'Failed to generate pattern from prompt.' }, { status: 500 });
       }
 
-      // <add>
       const safeRule = normaliseRule(rule);
-      // </add>
 
       // Create streaming response
       const encoder = new TextEncoder();
@@ -247,9 +255,7 @@ export const ServerRoute = createServerFileRoute('/api/interactive-grep').method
           // Search through repository data
           const matches = await processRepoFileWithPattern(
             repoData.root,
-            // <add>
             safeRule.pattern,
-            // </add>
             safeRule.languages || rule.language
           );
 

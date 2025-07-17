@@ -1,9 +1,166 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
-import { fetch as codefetchFetch, type FetchResultImpl } from 'codefetch-sdk/server';
 import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
 import { storeRepoData } from '~/server/repo-storage';
 import type { FileNode as RepoFileNode } from '~/lib/stores/scraped-data.store';
+
+interface GitHubTreeItem {
+  path: string;
+  mode: string;
+  type: 'blob' | 'tree';
+  sha: string;
+  size?: number;
+  url?: string;
+}
+
+interface GitHubTreeResponse {
+  sha: string;
+  url: string;
+  tree: GitHubTreeItem[];
+  truncated: boolean;
+}
+
+async function fetchGitHubRepo(repoUrl: string, githubToken?: string): Promise<RepoFileNode> {
+  // Parse GitHub URL
+  const urlMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+  if (!urlMatch) {
+    throw new Error('Invalid GitHub URL');
+  }
+
+  const [, owner, repo] = urlMatch;
+  const cleanRepo = repo.replace(/\.git$/, '');
+
+  // Prepare headers
+  const headers: HeadersInit = {
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'codefetch-cloudflare',
+  };
+
+  if (githubToken) {
+    headers['Authorization'] = `token ${githubToken}`;
+  }
+
+  // Get default branch
+  const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`, {
+    headers,
+  });
+  if (!repoResponse.ok) {
+    throw new Error(`Failed to fetch repository: ${repoResponse.status}`);
+  }
+  const repoData = (await repoResponse.json()) as any;
+  const defaultBranch = repoData.default_branch;
+
+  // Get tree
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${cleanRepo}/git/trees/${defaultBranch}?recursive=1`,
+    { headers }
+  );
+  if (!treeResponse.ok) {
+    throw new Error(`Failed to fetch tree: ${treeResponse.status}`);
+  }
+  const treeData = (await treeResponse.json()) as GitHubTreeResponse;
+
+  // Build file tree structure
+  const root: RepoFileNode = {
+    name: cleanRepo,
+    path: '',
+    type: 'directory',
+    children: [],
+  };
+
+  // Create a map to store directory nodes
+  const dirMap = new Map<string, RepoFileNode>();
+  dirMap.set('', root);
+
+  // Sort items by path to ensure parent directories are created first
+  const sortedItems = [...treeData.tree].sort((a, b) => a.path.localeCompare(b.path));
+
+  // Process each item in the tree
+  for (const item of sortedItems) {
+    const pathParts = item.path.split('/');
+    const name = pathParts[pathParts.length - 1];
+    const parentPath = pathParts.slice(0, -1).join('/');
+
+    // Ensure parent directory exists
+    let parent = dirMap.get(parentPath);
+    if (!parent) {
+      // Create missing parent directories
+      let currentPath = '';
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const dirName = pathParts[i];
+        const newPath = currentPath ? `${currentPath}/${dirName}` : dirName;
+
+        if (!dirMap.has(newPath)) {
+          const newDir: RepoFileNode = {
+            name: dirName,
+            path: newPath,
+            type: 'directory',
+            children: [],
+          };
+
+          const parentDir = dirMap.get(currentPath) || root;
+          if (!parentDir.children) parentDir.children = [];
+          parentDir.children.push(newDir);
+          dirMap.set(newPath, newDir);
+        }
+
+        currentPath = newPath;
+      }
+      parent = dirMap.get(parentPath) || root;
+    }
+
+    if (item.type === 'tree') {
+      // Directory
+      const dir: RepoFileNode = {
+        name,
+        path: item.path,
+        type: 'directory',
+        children: [],
+      };
+      if (!parent.children) parent.children = [];
+      parent.children.push(dir);
+      dirMap.set(item.path, dir);
+    } else {
+      // File
+      const file: RepoFileNode = {
+        name,
+        path: item.path,
+        type: 'file',
+        size: item.size,
+      };
+      if (!parent.children) parent.children = [];
+      parent.children.push(file);
+    }
+  }
+
+  return root;
+}
+
+async function fetchFileContent(
+  owner: string,
+  repo: string,
+  path: string,
+  githubToken?: string
+): Promise<string> {
+  const headers: HeadersInit = {
+    Accept: 'application/vnd.github.v3.raw',
+    'User-Agent': 'codefetch-cloudflare',
+  };
+
+  if (githubToken) {
+    headers['Authorization'] = `token ${githubToken}`;
+  }
+
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch file content: ${response.status}`);
+  }
+
+  return await response.text();
+}
 
 export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request, context }) => {
@@ -66,29 +223,45 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
     }
 
     try {
-      // In Cloudflare Workers, always disable filesystem cache
-      const isWorkerEnvironment = (context as any)?.AUTH_DB;
-
       // Get GitHub token from environment if available
-      const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+      const githubToken = (context as any)?.GITHUB_TOKEN || import.meta.env.GITHUB_TOKEN;
 
-      const codefetch = (await codefetchFetch({
-        source: targetUrl,
-        format: 'json',
-        noCache: isWorkerEnvironment ? true : undefined,
-        ...(githubToken && { githubToken }),
-      } as any)) as FetchResultImpl;
+      // Fetch repository structure
+      const root = await fetchGitHubRepo(targetUrl, githubToken);
 
-      // Check if result is valid
-      if (typeof codefetch === 'string' || !('root' in codefetch)) {
-        return Response.json({ error: 'Invalid response from codefetch' }, { status: 500 });
+      // Parse owner and repo from URL
+      const urlMatch = targetUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!urlMatch) {
+        throw new Error('Invalid GitHub URL');
       }
+      const [, owner, repo] = urlMatch;
+      const cleanRepo = repo.replace(/\.git$/, '');
 
-      // Store the repository data for later searches
+      // Store the repository structure
+      const metadata = {
+        url: targetUrl,
+        source: 'github.com',
+        gitRepo: `${owner}/${cleanRepo}`,
+        totalFiles: 0,
+        totalSize: 0,
+      };
+
+      // Count files and calculate size
+      const countFiles = (node: RepoFileNode): void => {
+        if (node.type === 'file') {
+          metadata.totalFiles++;
+          metadata.totalSize += node.size || 0;
+        } else if (node.children) {
+          node.children.forEach(countFiles);
+        }
+      };
+      countFiles(root);
+
+      // Store repository data
       try {
         await storeRepoData(targetUrl, {
-          root: codefetch.root,
-          metadata: (codefetch as any).metadata,
+          root,
+          metadata,
         });
       } catch (error) {
         console.error('Failed to store repository data:', error);
@@ -101,25 +274,74 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         async start(controller) {
           try {
             // Send metadata first
-            const metadata = {
+            const metadataChunk = {
               type: 'metadata',
               data: {
                 url: targetUrl,
                 scrapedAt: new Date().toISOString(),
-                title: (codefetch as any).metadata?.gitRepo || 'Scraped Content',
-                description: `Source: ${(codefetch as any).metadata?.source || targetUrl}`,
-                totalFiles: (codefetch as any).metadata?.totalFiles,
-                totalSize: (codefetch as any).metadata?.totalSize,
-                totalTokens: (codefetch as any).metadata?.totalTokens,
+                title: metadata.gitRepo || 'Scraped Content',
+                description: `Source: ${metadata.source || targetUrl}`,
+                totalFiles: metadata.totalFiles,
+                totalSize: metadata.totalSize,
               },
             };
-            controller.enqueue(encoder.encode(JSON.stringify(metadata) + '\n'));
+            controller.enqueue(encoder.encode(JSON.stringify(metadataChunk) + '\n'));
 
-            // Function to process tree nodes in chunks
-            const processNode = async (node: any, parentPath: string = '') => {
+            // Function to process tree nodes and fetch content for code files
+            const processNode = async (node: RepoFileNode, parentPath: string = '') => {
               const { children, ...nodeData } = node;
 
-              // Send node data with content but without children
+              // For files, try to fetch content if it's a code file
+              if (node.type === 'file' && node.path) {
+                const ext = node.name.split('.').pop()?.toLowerCase() || '';
+                const codeExtensions = [
+                  'ts',
+                  'tsx',
+                  'js',
+                  'jsx',
+                  'py',
+                  'java',
+                  'cpp',
+                  'c',
+                  'h',
+                  'hpp',
+                  'cs',
+                  'rb',
+                  'go',
+                  'rs',
+                  'php',
+                  'swift',
+                  'kt',
+                  'scala',
+                  'r',
+                  'md',
+                  'json',
+                  'yaml',
+                  'yml',
+                  'toml',
+                  'xml',
+                  'html',
+                  'css',
+                  'scss',
+                ];
+
+                if (codeExtensions.includes(ext) && (node.size || 0) < 100000) {
+                  // Skip large files
+                  try {
+                    const content = await fetchFileContent(
+                      owner,
+                      cleanRepo,
+                      node.path,
+                      githubToken
+                    );
+                    (nodeData as any).content = content;
+                  } catch (error) {
+                    console.error(`Failed to fetch content for ${node.path}:`, error);
+                  }
+                }
+              }
+
+              // Send node data
               const chunk = {
                 type: 'node',
                 data: {
@@ -139,7 +361,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
             };
 
             // Process the root node
-            await processNode(codefetch.root);
+            await processNode(root);
 
             // Send completion signal
             controller.enqueue(encoder.encode(JSON.stringify({ type: 'complete' }) + '\n'));
@@ -150,10 +372,11 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         },
       });
 
+      // Queue for embeddings if available
       const embedQueue = (context as any)?.EMBED_QUEUE;
       if (embedQueue) {
         // Send lightweight job – tree is already in memory.
-        await embedQueue.send(JSON.stringify({ url: targetUrl, tree: codefetch.root }));
+        await embedQueue.send(JSON.stringify({ url: targetUrl, tree: root }));
       }
 
       // Return streaming response with rate limit headers
