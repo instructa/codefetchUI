@@ -1,10 +1,5 @@
 import { defineNitroConfig } from 'nitropack/config';
-import type { Plugin } from 'rollup';
-import { cloudflare } from '@cloudflare/unenv-preset';
-// import { defineEnv } from 'unenv';
-// const { env } = defineEnv({
-//   presets: [cloudflare],
-// });
+
 /**
  * During Nitro's internal Rollup build the TanStack Start virtual modules that Vite
  * already handled (`tanstack-start-route-tree:v`, etc.) are no longer available.
@@ -12,7 +7,7 @@ import { cloudflare } from '@cloudflare/unenv-preset';
  * fail.  The exported objects are never used at runtime for our use-case
  * (reactStartCookies only needs `setCookie`), so an empty module is sufficient.
  */
-function tanstackVirtualModules(): Plugin {
+function tanstackVirtualModules() {
   const virtualIds = [
     'tanstack-start-route-tree:v',
     'tanstack-start-manifest:v',
@@ -21,14 +16,14 @@ function tanstackVirtualModules(): Plugin {
 
   return {
     name: 'tanstack-virtual-modules',
-    resolveId(id) {
+    resolveId(id: string) {
       if (virtualIds.includes(id)) {
         // mark as resolved so Rollup stops searching on file system
         return id;
       }
       return null;
     },
-    load(id) {
+    load(id: string) {
       if (virtualIds.includes(id)) {
         // Return an empty stub; nothing from these modules is required
         return 'export default {}';
@@ -41,6 +36,14 @@ function tanstackVirtualModules(): Plugin {
 export default defineNitroConfig({
   rollupConfig: {
     plugins: [tanstackVirtualModules()],
+    output: {
+      format: 'es',
+    },
   },
   preset: 'cloudflare-module',
+  experimental: {
+    wasm: true,
+  },
+  // Remove the problematic unenv and alias configurations
+  // These are causing type errors and build failures
 });

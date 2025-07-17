@@ -14,9 +14,6 @@ importers:
       '@clack/prompts':
         specifier: ^0.11.0
         version: 0.11.0
-      '@cloudflare/unenv-preset':
-        specifier: ^2.3.3
-        version: 2.3.3(unenv@1.10.0)(workerd@1.20250712.0)
       '@daveyplate/better-auth-tanstack':
         specifier: ^1.3.6
         version: 1.3.6(@tanstack/query-core@5.83.0)(@tanstack/react-query@5.83.0(react@19.1.0))(better-auth@1.2.12)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -122,18 +119,12 @@ importers:
       '@tanstack/react-virtual':
         specifier: ^3.13.12
         version: 3.13.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@types/nodemailer':
-        specifier: ^6.4.17
-        version: 6.4.17
       ansis:
         specifier: ^4.1.0
         version: 4.1.0
       better-auth:
         specifier: ^1.2.12
         version: 1.2.12
-      better-auth-cloudflare:
-        specifier: ^0.2.0
-        version: 0.2.0(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-auth@1.2.12)(better-sqlite3@12.2.0)(kysely@0.28.2)
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -173,9 +164,6 @@ importers:
       nitropack:
         specifier: ^2.12.2
         version: 2.12.2(@libsql/client@0.15.10)(@netlify/blobs@9.1.2)(aws4fetch@1.0.20)(better-sqlite3@12.2.0)(drizzle-orm@0.44.3(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@12.2.0)(kysely@0.28.2))
-      nodemailer:
-        specifier: ^7.0.3
-        version: 7.0.5
       react:
         specifier: ^19.1.0
         version: 19.1.0
@@ -194,9 +182,6 @@ importers:
       resend:
         specifier: ^4.6.0
         version: 4.6.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      rollup:
-        specifier: ^4.45.1
-        version: 4.45.1
       shadcn-dropzone:
         specifier: ^0.2.1
         version: 0.2.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.11)
@@ -212,9 +197,6 @@ importers:
       tsx:
         specifier: ^4.20.3
         version: 4.20.3
-      unenv:
-        specifier: ^1.10.0
-        version: 1.10.0
       unstorage:
         specifier: ^1.16.1
         version: 1.16.1(@netlify/blobs@9.1.2)(aws4fetch@1.0.20)(db0@0.3.2(@libsql/client@0.15.10)(better-sqlite3@12.2.0)(drizzle-orm@0.44.3(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@12.2.0)(kysely@0.28.2)))(ioredis@5.6.1)
@@ -234,6 +216,9 @@ importers:
       '@ast-grep/napi':
         specifier: ^0.38.7
         version: 0.38.7
+      '@cloudflare/unenv-preset':
+        specifier: ^2.3.3
+        version: 2.3.3(unenv@2.0.0-rc.17)(workerd@1.20250712.0)
       '@cloudflare/workers-types':
         specifier: latest
         version: 4.20250715.0
@@ -297,6 +282,9 @@ importers:
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
+      rollup:
+        specifier: ^4.45.1
+        version: 4.45.1
       shadcn:
         specifier: ^2.9.0
         version: 2.9.2(@types/node@24.0.14)(typescript@5.8.3)
@@ -306,6 +294,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+      unenv:
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
       vite-tsconfig-paths:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.8.3)(vite@7.0.5(@types/node@24.0.14)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
@@ -4772,9 +4763,6 @@ packages:
   '@types/node@24.0.14':
     resolution: {integrity: sha512-4zXMWD91vBLGRtHK3YbIoFMia+1nqEz72coM42C5ETjnNCa/heoj7NT1G67iAfOqMmcfhuCZ4uNpyz8EjlAejw==}
 
-  '@types/nodemailer@6.4.17':
-    resolution: {integrity: sha512-I9CCaIp6DTldEg7vyUTZi8+9Vo0hi1/T8gv3C89yk1rSAAzoKQ8H8ki/jBYJSFoH/BisgLP8tkZMlQ91CIquww==}
-
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
 
@@ -5332,11 +5320,6 @@ packages:
 
   before-after-hook@3.0.2:
     resolution: {integrity: sha512-Nik3Sc0ncrMK4UUdXQmAnRtzmNQTAAXmXIopizwZ1W1t8QmfJj+zL4OA2I7XPTPW5z5TDqv4hRo/JzouDJnX3A==}
-
-  better-auth-cloudflare@0.2.0:
-    resolution: {integrity: sha512-MsprcPv+OUMd7fGeyKy/VPSsTkkTPzGYEgtKR38UDtvQftT7ViX2/63QBAaZmtXwCiUetN7JEIjUapctb4lhgA==}
-    peerDependencies:
-      better-auth: ^1.1.21
 
   better-auth@1.2.12:
     resolution: {integrity: sha512-YicCyjQ+lxb7YnnaCewrVOjj3nPVa0xcfrOJK7k5MLMX9Mt9UnJ8GYaVQNHOHLyVxl92qc3C758X1ihqAUzm4w==}
@@ -6037,95 +6020,6 @@ packages:
   drizzle-kit@0.31.4:
     resolution: {integrity: sha512-tCPWVZWZqWVx2XUsVpJRnH9Mx0ClVOf5YUHerZ5so1OKSlqww4zy1R5ksEdGRcO3tM3zj0PYN6V48TbQCL1RfA==}
     hasBin: true
-
-  drizzle-orm@0.43.1:
-    resolution: {integrity: sha512-dUcDaZtE/zN4RV/xqGrVSMpnEczxd5cIaoDeor7Zst9wOe/HzC/7eAaulywWGYXdDEc9oBPMjayVEDg0ziTLJA==}
-    peerDependencies:
-      '@aws-sdk/client-rds-data': '>=3'
-      '@cloudflare/workers-types': '>=4'
-      '@electric-sql/pglite': '>=0.2.0'
-      '@libsql/client': '>=0.10.0'
-      '@libsql/client-wasm': '>=0.10.0'
-      '@neondatabase/serverless': '>=0.10.0'
-      '@op-engineering/op-sqlite': '>=2'
-      '@opentelemetry/api': ^1.4.1
-      '@planetscale/database': '>=1.13'
-      '@prisma/client': '*'
-      '@tidbcloud/serverless': '*'
-      '@types/better-sqlite3': '*'
-      '@types/pg': '*'
-      '@types/sql.js': '*'
-      '@vercel/postgres': '>=0.8.0'
-      '@xata.io/client': '*'
-      better-sqlite3: '>=7'
-      bun-types: '*'
-      expo-sqlite: '>=14.0.0'
-      gel: '>=2'
-      knex: '*'
-      kysely: '*'
-      mysql2: '>=2'
-      pg: '>=8'
-      postgres: '>=3'
-      prisma: '*'
-      sql.js: '>=1'
-      sqlite3: '>=5'
-    peerDependenciesMeta:
-      '@aws-sdk/client-rds-data':
-        optional: true
-      '@cloudflare/workers-types':
-        optional: true
-      '@electric-sql/pglite':
-        optional: true
-      '@libsql/client':
-        optional: true
-      '@libsql/client-wasm':
-        optional: true
-      '@neondatabase/serverless':
-        optional: true
-      '@op-engineering/op-sqlite':
-        optional: true
-      '@opentelemetry/api':
-        optional: true
-      '@planetscale/database':
-        optional: true
-      '@prisma/client':
-        optional: true
-      '@tidbcloud/serverless':
-        optional: true
-      '@types/better-sqlite3':
-        optional: true
-      '@types/pg':
-        optional: true
-      '@types/sql.js':
-        optional: true
-      '@vercel/postgres':
-        optional: true
-      '@xata.io/client':
-        optional: true
-      better-sqlite3:
-        optional: true
-      bun-types:
-        optional: true
-      expo-sqlite:
-        optional: true
-      gel:
-        optional: true
-      knex:
-        optional: true
-      kysely:
-        optional: true
-      mysql2:
-        optional: true
-      pg:
-        optional: true
-      postgres:
-        optional: true
-      prisma:
-        optional: true
-      sql.js:
-        optional: true
-      sqlite3:
-        optional: true
 
   drizzle-orm@0.44.3:
     resolution: {integrity: sha512-8nIiYQxOpgUicEL04YFojJmvC4DNO4KoyXsEIqN44+g6gNBr6hmVpWk3uyAt4CaTiRGDwoU+alfqNNeonLAFOQ==}
@@ -7891,10 +7785,6 @@ packages:
   node-source-walk@7.0.1:
     resolution: {integrity: sha512-3VW/8JpPqPvnJvseXowjZcirPisssnBuDikk6JIZ8jQzF7KJQX52iPFX4RYYxLycYH7IbMRSPUOga/esVjy5Yg==}
     engines: {node: '>=18'}
-
-  nodemailer@7.0.5:
-    resolution: {integrity: sha512-nsrh2lO3j4GkLLXoeEksAMgAOqxOv6QumNRVQTJwKH4nuiww6iC2y7GyANs9kRAxCexg3+lTWM3PZ91iLlVjfg==}
-    engines: {node: '>=6.0.0'}
 
   nopt@8.1.0:
     resolution: {integrity: sha512-ieGu42u/Qsa4TFktmaKEwM6MQH0pOWnaB3htzh0JRtx84+Mebc0cbZYN5bC+6WTZ4+77xrL9Pn5m7CV6VIkV7A==}
@@ -11406,12 +11296,6 @@ snapshots:
   '@cloudflare/kv-asset-handler@0.4.0':
     dependencies:
       mime: 3.0.0
-
-  '@cloudflare/unenv-preset@2.3.3(unenv@1.10.0)(workerd@1.20250712.0)':
-    dependencies:
-      unenv: 1.10.0
-    optionalDependencies:
-      workerd: 1.20250712.0
 
   '@cloudflare/unenv-preset@2.3.3(unenv@2.0.0-rc.15)(workerd@1.20250712.0)':
     dependencies:
@@ -15653,10 +15537,6 @@ snapshots:
     dependencies:
       undici-types: 7.8.0
 
-  '@types/nodemailer@6.4.17':
-    dependencies:
-      '@types/node': 24.0.14
-
   '@types/normalize-package-data@2.4.4': {}
 
   '@types/oracledb@6.5.2':
@@ -16296,41 +16176,6 @@ snapshots:
   base64-js@1.5.1: {}
 
   before-after-hook@3.0.2: {}
-
-  better-auth-cloudflare@0.2.0(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-auth@1.2.12)(better-sqlite3@12.2.0)(kysely@0.28.2):
-    dependencies:
-      better-auth: 1.2.12
-      drizzle-orm: 0.43.1(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@12.2.0)(kysely@0.28.2)
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - '@aws-sdk/client-rds-data'
-      - '@cloudflare/workers-types'
-      - '@electric-sql/pglite'
-      - '@libsql/client'
-      - '@libsql/client-wasm'
-      - '@neondatabase/serverless'
-      - '@op-engineering/op-sqlite'
-      - '@opentelemetry/api'
-      - '@planetscale/database'
-      - '@prisma/client'
-      - '@tidbcloud/serverless'
-      - '@types/better-sqlite3'
-      - '@types/pg'
-      - '@types/sql.js'
-      - '@vercel/postgres'
-      - '@xata.io/client'
-      - better-sqlite3
-      - bun-types
-      - expo-sqlite
-      - gel
-      - knex
-      - kysely
-      - mysql2
-      - pg
-      - postgres
-      - prisma
-      - sql.js
-      - sqlite3
 
   better-auth@1.2.12:
     dependencies:
@@ -17026,15 +16871,6 @@ snapshots:
       esbuild-register: 3.6.0(esbuild@0.25.6)
     transitivePeerDependencies:
       - supports-color
-
-  drizzle-orm@0.43.1(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@12.2.0)(kysely@0.28.2):
-    optionalDependencies:
-      '@cloudflare/workers-types': 4.20250715.0
-      '@libsql/client': 0.15.10
-      '@opentelemetry/api': 1.9.0
-      '@types/pg': 8.15.4
-      better-sqlite3: 12.2.0
-      kysely: 0.28.2
 
   drizzle-orm@0.44.3(@cloudflare/workers-types@4.20250715.0)(@libsql/client@0.15.10)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(better-sqlite3@12.2.0)(kysely@0.28.2):
     optionalDependencies:
@@ -18945,8 +18781,6 @@ snapshots:
   node-source-walk@7.0.1:
     dependencies:
       '@babel/parser': 7.28.0
-
-  nodemailer@7.0.5: {}
 
   nopt@8.1.0:
     dependencies:
