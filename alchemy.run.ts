@@ -110,10 +110,10 @@ const aiLimit = await AiGateway('ai-rpm', {
   rateLimitingTechnique: 'sliding',
 });
 
-const quotaDO = DurableObjectNamespace('QuotaDO', {
-  className: 'QuotaDO',
-  sqlite: true,
-});
+// const quotaDO = DurableObjectNamespace('QuotaDO', {
+//   className: 'QuotaDO',
+//   sqlite: true,
+// });
 
 // Prepare encrypted secrets for the worker
 const secrets = {
@@ -150,7 +150,12 @@ const secrets = {
 
 const site = await TanStackStart('codefetch-ui', {
   // Build command – override if you have a custom one
-  command: 'pnpm run build',
+  command: 'NODE_ENV=production vite build',
+  dev: {
+    command: 'vite dev',
+  },
+
+  noBundle: true,
 
   // Make all previously-created resources available to the app
   bindings: {
