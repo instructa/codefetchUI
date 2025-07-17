@@ -67,7 +67,7 @@ export class KVRateLimiter {
 
   async getRemainingRequests(identifier: string, kv: KVNamespace): Promise<number> {
     const key = `${this.keyPrefix}${identifier}`;
-    const data = await kv.get(key, 'json') as RateLimitEntry | null;
+    const data = await kv.get(key, { type: 'json' }) as RateLimitEntry | null;
     
     if (!data || data.resetTime < Date.now()) {
       return this.maxRequests;
@@ -78,7 +78,7 @@ export class KVRateLimiter {
 
   async getResetTime(identifier: string, kv: KVNamespace): Promise<number> {
     const key = `${this.keyPrefix}${identifier}`;
-    const data = await kv.get(key, 'json') as RateLimitEntry | null;
+    const data = await kv.get(key, { type: 'json' }) as RateLimitEntry | null;
     
     return data?.resetTime || 0;
   }

@@ -168,10 +168,15 @@ async function processRepoFileWithPattern(
   return matches;
 }
 
+interface InteractiveGrepRequestBody {
+  prompt: string;
+  repoUrl: string;
+}
+
 export const ServerRoute = createServerFileRoute('/api/interactive-grep').methods({
   POST: async ({ request }) => {
     try {
-      const body = await request.json();
+      const body = await request.json() as InteractiveGrepRequestBody;
       const { prompt, repoUrl } = body;
 
       if (!prompt || typeof prompt !== 'string') {

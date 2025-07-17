@@ -577,11 +577,11 @@ export function SignUpForm({
       {/* Terms */}
       <p className="text-center text-xs text-muted-foreground">
         By signing up, you agree to our{' '}
-        <Link to="/terms" as any className={formClassNames.outlineButton}>
+        <Link to="/terms" className={formClassNames.outlineButton}>
           Terms of Service
         </Link>{' '}
         &amp;{' '}
-        <Link to="/privacy" as any className={formClassNames.outlineButton}>
+        <Link to="/privacy" className={formClassNames.outlineButton}>
           Privacy Policy
         </Link>
         .

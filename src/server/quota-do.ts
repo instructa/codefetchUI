@@ -35,7 +35,8 @@ export class QuotaDO {
     if (request.method === 'POST' && action === 'decrement') {
       let tokens = 0;
       try {
-        ({ tokens = 0 } = await request.clone().json());
+        const body = await request.clone().json() as { tokens?: number };
+        tokens = body.tokens ?? 0;
       } catch {
         /* ignore malformed body – treat as zero */
       }

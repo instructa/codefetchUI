@@ -84,16 +84,16 @@ function FileTreeNode({ node, level, onSelect }: FileTreeNodeProps) {
   const { expandedPaths, toggleExpandedPath, selectedFilePath } = useScrapedDataStore();
   const router = useRouter();
 
-  // Check if we're in a scrape route
-  const isInScrapeRoute = router.state.location.pathname.startsWith('/scrape/');
+  // Check if we're in a chat route
+  const isInChatRoute = router.state.location.pathname.startsWith('/chat/');
 
   // Try to get search params from different route contexts
   let fileFromUrl: string | undefined;
-  if (isInScrapeRoute) {
+  if (isInChatRoute) {
     try {
-      // Try scrape route
-      const searchFromScrape = useSearch({ from: '/scrape/$url' }) as { file?: string };
-      fileFromUrl = searchFromScrape?.file ? decodeURIComponent(searchFromScrape.file) : undefined;
+      // Try chat route
+      const searchFromChat = useSearch({ from: '/chat/$url' }) as { file?: string };
+      fileFromUrl = searchFromChat?.file ? decodeURIComponent(searchFromChat.file) : undefined;
     } catch {
       // If that fails, we're likely in a different route context
       fileFromUrl = undefined;
@@ -237,25 +237,25 @@ export function FileTree() {
   const [isSearching, setIsSearching] = useState(false);
 
   // Check if we're in a scrape route
-  const isInScrapeRoute = router.state.location.pathname.startsWith('/scrape/');
+  const isInChatRoute = router.state.location.pathname.startsWith('/chat/');
 
-  // Try to get params from scrape route if we're in that context
+  // Try to get params from chat route if we're in that context
   let urlParam: string | undefined;
-  if (isInScrapeRoute) {
+  if (isInChatRoute) {
     try {
-      const scrapeParams = useParams({ from: '/scrape/$url' });
-      urlParam = scrapeParams.url;
+      const chatParams = useParams({ from: '/chat/$url' });
+      urlParam = chatParams.url;
     } catch {
-      // Not in scrape route, that's fine
+      // Not in chat route, that's fine
       urlParam = undefined;
     }
   }
 
   const handleFileSelect = (path: string) => {
-    // If we have a URL param, navigate to the scrape route
-    if (urlParam && isInScrapeRoute) {
+    // If we have a URL param, navigate to the chat route
+    if (urlParam && isInChatRoute) {
       navigate({
-        to: '/scrape/$url',
+        to: '/chat/$url',
         params: { url: urlParam },
         search: { file: path },
       });

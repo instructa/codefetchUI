@@ -24,9 +24,16 @@ interface Summary {
   totalMatches: number;
 }
 
+interface SearchRequestBody {
+  prompt: string;
+  repoUrl: string;
+  engine?: SearchEngine;
+}
+
 export const ServerRoute = createServerFileRoute('/api/search' as any).methods({
   POST: async ({ request, context }) => {
-    const { prompt, repoUrl, engine: engineArg } = await request.json();
+    const body = await request.json() as SearchRequestBody;
+    const { prompt, repoUrl, engine: engineArg } = body;
 
     if (typeof prompt !== 'string' || !prompt.trim()) {
       return Response.json({ error: 'Prompt is required' }, { status: 400 });

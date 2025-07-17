@@ -66,7 +66,8 @@ export function ResetPasswordForm({ className, localization = {} }: ResetPasswor
     const token = (search as any)?.token;
     if (!token) {
       router.navigate({
-        to: '/auth/sign-in',
+        to: '/auth/$pathname',
+        params: { pathname: 'sign-in' },
       });
       toast.error('Invalid Link', {
         description: 'The password reset link is invalid or expired.',
@@ -89,7 +90,8 @@ export function ResetPasswordForm({ className, localization = {} }: ResetPasswor
       });
 
       router.navigate({
-        to: '/auth/sign-in',
+        to: '/auth/$pathname',
+        params: { pathname: 'sign-in' },
       });
     } catch (error) {
       toast.error('Error', {

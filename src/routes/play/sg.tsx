@@ -8,8 +8,13 @@ const MonacoEditor = React.lazy(() => import('@monaco-editor/react'));
 
 export const Route = createFileRoute('/play/sg')({
   component: Playground,
+  validateSearch: (search: Record<string, unknown>): { url?: string } => {
+    return {
+      url: typeof search.url === 'string' ? search.url : undefined,
+    };
+  },
   loader: async ({ search }) => {
-    return { repoUrl: typeof search.url === 'string' ? search.url : '' };
+    return { repoUrl: search.url || '' };
   },
 });
 

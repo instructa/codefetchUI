@@ -150,7 +150,7 @@ const secrets = {
 
 const site = await TanStackStart('codefetch-ui', {
   // Build command – override if you have a custom one
-  command: 'pnpm run build',
+  command: 'pnpm run build:prod',
 
   // Make all previously-created resources available to the app
   bindings: {

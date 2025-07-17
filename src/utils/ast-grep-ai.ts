@@ -1,6 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as yaml from 'js-yaml';
-import { validateRule as validateAstGrepRule } from './pattern-guard';
+import { validateRule } from './pattern-guard';
+
+// Re-export validateRule as validateAstGrepRule for external use
+export { validateRule as validateAstGrepRule } from './pattern-guard';
 
 // Types for ast-grep AI functionality
 // Update the AstGrepRule interface to a union type for better handling of simple and complex rules
@@ -812,26 +815,30 @@ Respond with ONLY the YAML rule, no additional explanation.`;
     const suggestedPaths = parsedYaml.suggestedPaths;
 
     // Validate the generated rule (which also transforms lowercase metavariables)
-    const validation = validateAstGrepRule(rule);
-    if (!validation.valid) {
-      console.warn(`AI-generated rule invalid: ${validation.error}. Trying path-based fallback.`);
+    // Only validate SimpleRule types that have a pattern property
+    const isSimpleRule = 'pattern' in rule;
+    if (isSimpleRule) {
+      const validation = validateRule(rule as SimpleRule);
+      if (!validation.valid) {
+        console.warn(`AI-generated rule invalid: ${validation.error}. Trying path-based fallback.`);
 
-      // Try path-based fallback first
-      const pathFallback = createPathBasedFallback(prompt);
+        // Try path-based fallback first
+        const pathFallback = createPathBasedFallback(prompt);
 
-      // If path fallback looks too generic, try template matching again with relaxed criteria
-      const relaxedTemplate = findMatchingTemplate(prompt);
-      if (relaxedTemplate) {
+        // If path fallback looks too generic, try template matching again with relaxed criteria
+        const relaxedTemplate = findMatchingTemplate(prompt);
+        if (relaxedTemplate) {
+          return {
+            rule: relaxedTemplate.rule,
+            intent,
+          };
+        }
+
         return {
-          rule: relaxedTemplate.rule,
+          rule: pathFallback,
           intent,
         };
       }
-
-      return {
-        rule: pathFallback,
-        intent,
-      };
     }
 
     // Validate rule complexity

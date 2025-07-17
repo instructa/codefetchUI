@@ -400,7 +400,7 @@ export function SignInForm({
       {/* Sign up link */}
       <p className="text-center text-sm text-muted-foreground">
         Don't have an account?{' '}
-        <Link to="/auth/sign-up" search={(prev) => prev} className={formClassNames.outlineButton}>
+        <Link to="/auth/$pathname" params={{ pathname: 'sign-up' }} search={(prev) => prev} className={formClassNames.outlineButton}>
           {mergedLocalization.SIGN_UP_LINK || 'Sign up'}
         </Link>
       </p>
@@ -408,11 +408,11 @@ export function SignInForm({
       {/* Terms */}
       <p className="text-center text-xs text-muted-foreground">
         By signing in, you agree to our{' '}
-        <Link to="/terms" as any className={formClassNames.outlineButton}>
+        <Link to="/terms" className={formClassNames.outlineButton}>
           Terms of Service
         </Link>{' '}
         &amp;{' '}
-        <Link to="/privacy" as any className={formClassNames.outlineButton}>
+        <Link to="/privacy" className={formClassNames.outlineButton}>
           Privacy Policy
         </Link>
         .

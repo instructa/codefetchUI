@@ -136,8 +136,8 @@ const processFile = async (
           path: filePath,
           match: node.text(),
           range: {
-            start: { line: range.start.row },
-            end: { line: range.end.row },
+            start: { line: range.start.line },
+            end: { line: range.end.line },
           },
           metadata: rule.metadata,
           rule: rule.id,

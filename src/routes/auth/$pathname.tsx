@@ -35,7 +35,7 @@ export const Route = createFileRoute('/auth/$pathname')({
           // Continue to redirect even if sign‑out fails
         }
       }
-      throw redirect({ to: '/auth/sign-in' });
+      throw redirect({ to: '/auth/$pathname', params: { pathname: 'sign-in' } });
     }
 
     // Only check session for sign‑in and sign‑up routes
@@ -101,7 +101,7 @@ function RouteComponent() {
           <div className={authContainerClassName}>
             <div className="px-8 pt-8">
               <div className={authHeaderClassName}>
-                <h1 className={authTitleClassName}>{authCardLocalization.FORGOT_PASSWORD_TITLE}</h1>
+                <h1 className={authTitleClassName}>{authCardLocalization.FORGOT_PASSWORD_TITLE || 'Reset your password'}</h1>
                 <p className={authDescriptionClassName}>
                   {authCardLocalization.FORGOT_PASSWORD_DESCRIPTION}
                 </p>
@@ -118,7 +118,7 @@ function RouteComponent() {
           <div className={authContainerClassName}>
             <div className="px-8 pt-8">
               <div className={authHeaderClassName}>
-                <h1 className={authTitleClassName}>{authCardLocalization.RESET_PASSWORD_TITLE}</h1>
+                <h1 className={authTitleClassName}>{authCardLocalization.RESET_PASSWORD_TITLE || 'Create new password'}</h1>
                 <p className={authDescriptionClassName}>
                   {authCardLocalization.RESET_PASSWORD_DESCRIPTION}
                 </p>

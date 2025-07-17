@@ -62,13 +62,19 @@ export async function storeRepoData(url: string, data: any): Promise<void> {
   );
 }
 
+interface StoredRepoData {
+  url: string;
+  fetchedAt: string;
+  data: any;
+}
+
 /**
  * Retrieve repository data
  */
 export async function getRepoData(url: string): Promise<any | null> {
   const key = generateRepoKey(url);
 
-  const stored = await storage.getItem(key);
+  const stored = await storage.getItem<StoredRepoData>(key);
 
   if (!stored) {
     return null;

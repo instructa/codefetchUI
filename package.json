@@ -4,7 +4,8 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && tsc --noEmit",
+    "build:prod": "vite build",
     "deploy": "alchemy deploy --env-file .env",
     "destroy": "alchemy destroy --env-file .env",
     "dev": "alchemy dev --env-file .env",
@@ -112,6 +113,7 @@
     "better-sqlite3": "^12.2.0",
     "class-variance-authority": "^0.7.1",
     "dotenv": "^17.2.0",
+    "esbuild": "^0.25.6",
     "miniflare": "^4.20250709.0",
     "oxlint": "^1.6.0",
     "prettier": "^3.6.2",
