@@ -150,7 +150,7 @@ const secrets = {
 
 const site = await TanStackStart('codefetch-ui', {
   // Build command – override if you have a custom one
-  command: 'vite build',
+  command: 'NODE_ENV=production vite build',
   dev: {
     command: 'vite dev',
   },

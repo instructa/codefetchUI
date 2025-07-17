@@ -1,0 +1,54 @@
+{
+  "name": "codefetch-ui",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2025-07-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": ".output/public", "binding": "ASSETS" },
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "7c27c5c5f1fc46cda49db46655d7a71b",
+      "preview_id": "7c27c5c5f1fc46cda49db46655d7a71b"
+    },
+    {
+      "binding": "CACHE",
+      "id": "3c3b99ba95514126a970ee537adba1df",
+      "preview_id": "3c3b99ba95514126a970ee537adba1df"
+    },
+    {
+      "binding": "RATE_LIMIT_KV",
+      "id": "3c3b99ba95514126a970ee537adba1df",
+      "preview_id": "3c3b99ba95514126a970ee537adba1df"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "UPLOADS",
+      "bucket_name": "codefetch-ui-uploads-dev",
+      "preview_bucket_name": "codefetch-ui-uploads-dev"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DATABASE",
+      "database_id": "cb0de5a2-2ada-435f-b07c-801a952141a1",
+      "database_name": "codefetch-ui-db-dev",
+      "migrations_dir": "./drizzle/main",
+      "preview_database_id": "cb0de5a2-2ada-435f-b07c-801a952141a1"
+    },
+    {
+      "binding": "ANALYTICS",
+      "database_id": "25c8a257-edbd-45f6-af32-5d0cc640a29f",
+      "database_name": "codefetch-ui-analytics-dev",
+      "migrations_dir": "./drizzle/analytics",
+      "preview_database_id": "25c8a257-edbd-45f6-af32-5d0cc640a29f"
+    },
+    {
+      "binding": "AUTH_DB",
+      "database_id": "3ed48fba-261f-402c-a156-d8856fe2b9f1",
+      "database_name": "codefetch-auth-dev",
+      "migrations_dir": "./drizzle/auth",
+      "preview_database_id": "3ed48fba-261f-402c-a156-d8856fe2b9f1"
+    }
+  ]
+}
