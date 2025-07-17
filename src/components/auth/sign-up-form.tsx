@@ -8,15 +8,15 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Link } from '@tanstack/react-router';
 
-import { useCaptcha } from '@daveyplate/better-auth-ui';
-import { useIsHydrated } from '@daveyplate/better-auth-ui';
+import { useCaptcha } from '~/hooks/use-captcha';
+import { useIsHydrated } from '~/hooks/use-is-hydrated';
 import { useOnSuccessTransition } from '@daveyplate/better-auth-ui';
 import { AuthUIContext } from '@daveyplate/better-auth-ui';
 import { getLocalizedError, getPasswordSchema, getSearchParam } from '@daveyplate/better-auth-ui';
 import { cn } from '~/lib/utils';
 import type { AuthLocalization } from '@daveyplate/better-auth-ui';
 import type { PasswordValidation } from '@daveyplate/better-auth-ui';
-import { Captcha } from '@daveyplate/better-auth-ui';
+import { Captcha } from '~/components/auth/Captcha';
 import { PasswordInput } from '@daveyplate/better-auth-ui';
 import { GoogleIcon, GitHubIcon } from '@daveyplate/better-auth-ui';
 import { Button } from '~/components/ui/button';
