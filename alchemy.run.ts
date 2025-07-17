@@ -181,7 +181,7 @@ const site = await TanStackStart('codefetch-ui', {
 
     // Custom bindings used by our server routes
     AI_RATELIMIT: aiLimit,
-    QUOTA_DO: quotaDO,
+    // QUOTA_DO: quotaDO,
     AI_GATEWAY_URL: alchemy.secret(process.env.AI_GATEWAY_URL || 'https://gw.example.ai'),
   },
 });

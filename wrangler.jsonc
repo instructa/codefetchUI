@@ -21,9 +21,6 @@
       "preview_id": "3c3b99ba95514126a970ee537adba1df"
     }
   ],
-  "durable_objects": {
-    "bindings": [{ "name": "QUOTA_DO", "class_name": "QuotaDO" }]
-  },
   "r2_buckets": [
     {
       "binding": "UPLOADS",
@@ -54,7 +51,5 @@
       "preview_database_id": "3ed48fba-261f-402c-a156-d8856fe2b9f1"
     }
   ],
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["QuotaDO"], "new_classes": [] }
-  ]
+  "vars": { "NODE_ENV": "production" }
 }
