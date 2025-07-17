@@ -138,9 +138,6 @@ const secrets = {
   // CodeFetch SDK
   CODEFETCH_API_KEY: alchemy.secret(process.env.CODEFETCH_API_KEY || ''),
 
-  // Environment
-  NODE_ENV: alchemy.secret(app.stage === 'prod' ? 'production' : 'development'),
-
   MONTHLY_TOKEN_LIMIT: alchemy.secret(process.env.MONTHLY_TOKEN_LIMIT || '1000000'),
 };
 
@@ -150,12 +147,12 @@ const secrets = {
 
 const site = await TanStackStart('codefetch-ui', {
   // Build command – override if you have a custom one
-  command: 'NODE_ENV=production vite build',
-  dev: {
-    command: 'vite dev',
-  },
+  // command: 'NODE_ENV=production vite build',
+  // dev: {
+  //   command: 'vite dev',
+  // },
 
-  noBundle: true,
+  // noBundle: true,
 
   // Make all previously-created resources available to the app
   bindings: {

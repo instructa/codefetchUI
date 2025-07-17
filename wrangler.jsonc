@@ -50,5 +50,6 @@
       "migrations_dir": "./drizzle/auth",
       "preview_database_id": "3ed48fba-261f-402c-a156-d8856fe2b9f1"
     }
-  ]
+  ],
+  "vars": { "NODE_ENV": "production" }
 }
