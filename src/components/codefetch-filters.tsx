@@ -296,7 +296,7 @@ export function CodefetchFilters() {
                   placeholder="e.g., .vue, .svelte, .astro (comma-separated)"
                   value={filters.customExtensions}
                   onChange={(e) => filters.setCustomExtensions(e.target.value)}
-                  className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
+                  className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/25"
                 />
                 <p className="text-xs text-muted-foreground">
                   Add custom file extensions separated by commas
@@ -353,7 +353,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/25"
                       />
                       <Button
                         size="icon"
@@ -405,7 +405,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/25"
                       />
                       <Button
                         size="icon"
@@ -459,7 +459,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/25"
                       />
                       <Button
                         size="icon"
@@ -507,7 +507,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/25"
                       />
                       <Button
                         size="icon"
@@ -606,7 +606,7 @@ export function CodefetchFilters() {
                               const value = e.target.value;
                               filters.setMaxTokens(value ? parseInt(value) : null);
                             }}
-                            className="flex-1 h-8 text-xs rounded-md placeholder:text-muted-foreground/40"
+                            className="flex-1 h-8 text-xs rounded-md placeholder:text-muted-foreground/25"
                           />
                           <span className="text-xs text-muted-foreground">tokens</span>
                         </div>
@@ -743,8 +743,11 @@ export function CodefetchFilters() {
               <div className="space-y-2">
                 <Label className="text-xs">AI Prompt Template</Label>
                 <Select value={filters.selectedPrompt} onValueChange={filters.setSelectedPrompt}>
-                  <SelectTrigger className="h-8 text-xs rounded-md input-enhanced placeholder:text-muted-foreground/40">
-                    <SelectValue placeholder="Select a prompt template" />
+                  <SelectTrigger className="h-8 text-xs rounded-md input-enhanced">
+                    <SelectValue
+                      placeholder="Select a prompt template"
+                      className="text-muted-foreground/25"
+                    />
                   </SelectTrigger>
                   <SelectContent className="rounded-md shadow-lg">
                     <SelectItem value="none" className="text-xs">
