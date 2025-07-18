@@ -54,6 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu';
 import { CodeSearchResults } from '~/components/code-search-results';
+import type { FileNode } from '~/lib/stores/scraped-data.store';
 import { GeminiApiKeyModal } from '~/components/gemini-api-key-modal';
 import {
   getGeminiApiKey,
@@ -239,14 +240,15 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   // Initialize preview generator to connect stores and worker
   usePreviewGenerator();
 
-  // Reset mobile states when switching between mobile and desktop
-  useEffect(() => {
-    if (!isMobile) {
-      setIsFileTreeCollapsed(true);
-      setIsFilterSheetOpen(false);
-      setIsSearchSheetOpen(false);
-    }
-  }, [isMobile]);
+  // Mobile state management - reset states directly when needed
+  const prevIsMobile = useRef(isMobile);
+  if (prevIsMobile.current !== isMobile && !isMobile) {
+    // Switching from mobile to desktop - reset states
+    setIsFileTreeCollapsed(true);
+    setIsFilterSheetOpen(false);
+    setIsSearchSheetOpen(false);
+  }
+  prevIsMobile.current = isMobile;
 
   const hasSetInitialFilePath = useRef(false);
   const hasStartedScraping = useRef(false);
@@ -261,10 +263,13 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       onComplete: (data, meta) => {
         setScrapedData(data, meta);
         if (initialFilePath && !hasSetInitialFilePath.current) {
-          setTimeout(() => {
-            setSelectedFilePath(initialFilePath);
-            hasSetInitialFilePath.current = true;
-          }, 0);
+          // Handle initial file path directly in onComplete
+          setSelectedFilePath(initialFilePath);
+          const file = data.root && findFileByPath(data.root, initialFilePath);
+          if (file && file.type === 'file') {
+            handleFileOpen({ id: file.path, name: file.name, path: file.path });
+          }
+          hasSetInitialFilePath.current = true;
         }
       },
       onError: (err) => {
@@ -295,17 +300,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     // Don't cleanup on every unmount - this causes issues with StrictMode
     // Only cleanup when the component is truly unmounting (URL change or navigation)
   }, [url, startScraping]); // Include startScraping in deps
-
-  useEffect(() => {
-    if (initialFilePath && scrapedData && !hasSetInitialFilePath.current) {
-      setSelectedFilePath(initialFilePath);
-      const file = getFileByPath(initialFilePath);
-      if (file) {
-        handleFileOpen({ id: file.path, name: file.name, path: file.path });
-      }
-      hasSetInitialFilePath.current = true;
-    }
-  }, [initialFilePath, scrapedData, setSelectedFilePath, getFileByPath]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();

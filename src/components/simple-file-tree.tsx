@@ -467,18 +467,35 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const filters = useCodefetchFilters();
-  const [prevFilters, setPrevFilters] = useState(filters);
   const { manualSelections, setManualSelections, expandedPaths, toggleExpandedPath } =
     useScrapedDataStore();
 
-  // Reset manual selections when filters change
-  useEffect(() => {
-    const hasFiltersChanged = JSON.stringify(filters) !== JSON.stringify(prevFilters);
-    if (hasFiltersChanged) {
-      setManualSelections({ checked: new Set(), unchecked: new Set() });
-      setPrevFilters(filters);
-    }
-  }, [filters, prevFilters, setManualSelections]);
+  // Track filter changes and reset manual selections without useEffect
+  const filtersKey = useMemo(
+    () =>
+      JSON.stringify({
+        extensions: filters.extensions,
+        customExtensions: filters.customExtensions,
+        includeFiles: filters.includeFiles,
+        excludeFiles: filters.excludeFiles,
+        includeDirs: filters.includeDirs,
+        excludeDirs: filters.excludeDirs,
+      }),
+    [
+      filters.extensions,
+      filters.customExtensions,
+      filters.includeFiles,
+      filters.excludeFiles,
+      filters.includeDirs,
+      filters.excludeDirs,
+    ]
+  );
+
+  const prevFiltersKey = useRef(filtersKey);
+  if (prevFiltersKey.current !== filtersKey) {
+    setManualSelections({ checked: new Set(), unchecked: new Set() });
+    prevFiltersKey.current = filtersKey;
+  }
 
   // Calculate initial matches for root level
   const rootChildMatches = useMemo(() => {
