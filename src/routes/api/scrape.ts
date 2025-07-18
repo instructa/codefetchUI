@@ -1,5 +1,10 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
-import { fetchFromWeb, type FetchResult } from 'codefetch-sdk/worker';
+import {
+  fetchFromWeb,
+  streamGitHubFiles,
+  createMarkdownStream,
+  type FetchResult,
+} from 'codefetch-sdk/worker';
 import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limiter-wrapper';
 import { getApiSecurityConfig } from '~/lib/api-security';
 import { storeRepoData } from '~/server/repo-storage';
@@ -60,6 +65,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
 
     const url = new URL(request.url);
     const targetUrl = url.searchParams.get('url');
+    const useStreaming = url.searchParams.get('stream') === 'true';
 
     if (!targetUrl) {
       return Response.json({ error: 'URL parameter is required' }, { status: 400 });
@@ -100,6 +106,88 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // Get GitHub token from environment if available
       const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
 
+      // Check if streaming is requested and URL is a GitHub repository
+      const isGitHubUrl = targetUrl.includes('github.com');
+      const githubMatch = targetUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+
+      if (useStreaming && isGitHubUrl && githubMatch) {
+        const [, owner, repo] = githubMatch;
+
+        // Create a streaming response
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              // Stream files from GitHub
+              const fileStream = streamGitHubFiles(owner, repo, {
+                token: githubToken,
+                maxTokens: 100000,
+                extensions: ['.ts', '.tsx', '.js', '.jsx', '.md', '.json'],
+                excludeDirs: ['node_modules', 'dist', 'build', '.git'],
+              });
+
+              // Create markdown stream from file stream
+              const markdownStream = createMarkdownStream(fileStream, {
+                includeTreeStructure: true,
+                tokenEncoder: 'cl100k',
+              });
+
+              const reader = markdownStream.getReader();
+
+              // Send metadata first
+              const metadata = {
+                type: 'metadata',
+                data: {
+                  url: targetUrl,
+                  scrapedAt: new Date().toISOString(),
+                  title: `${owner}/${repo}`,
+                  description: `GitHub repository: ${owner}/${repo}`,
+                  streaming: true,
+                },
+              };
+              controller.enqueue(encoder.encode(JSON.stringify(metadata) + '\n'));
+
+              // Stream markdown chunks
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = {
+                  type: 'markdown',
+                  data: new TextDecoder().decode(value),
+                };
+                controller.enqueue(encoder.encode(JSON.stringify(chunk) + '\n'));
+              }
+
+              // Send completion signal
+              controller.enqueue(encoder.encode(JSON.stringify({ type: 'complete' }) + '\n'));
+              controller.close();
+            } catch (error) {
+              console.error('Streaming error:', error);
+              controller.error(error);
+            }
+          },
+        });
+
+        const remaining = await universalRateLimiter.getRemainingRequests(
+          clientIp,
+          rateLimiterContext
+        );
+        const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'application/x-ndjson',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': String(remaining),
+            'X-RateLimit-Reset': String(Math.floor(resetTime / 1000)),
+          },
+        });
+      }
+
+      // Non-streaming: use regular fetchFromWeb
       const result = await fetchFromWeb(targetUrl, {
         ...(githubToken && { token: githubToken }),
         maxTokens: 100000, // Set a reasonable token limit
