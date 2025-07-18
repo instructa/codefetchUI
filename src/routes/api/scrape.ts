@@ -152,8 +152,9 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                // value is a Uint8Array, decode it to string
-                const text = new TextDecoder().decode(value);
+                // Check if value is already a string or needs decoding
+                const text = typeof value === 'string' ? value : new TextDecoder().decode(value);
+
                 const chunk = {
                   type: 'markdown',
                   data: text,
