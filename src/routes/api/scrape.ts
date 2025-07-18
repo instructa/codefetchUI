@@ -138,7 +138,9 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         const cache = (caches as any).default;
         // Use the actual host from the request to ensure valid URL
         const protocol = request.url.startsWith('https:') ? 'https' : 'http';
-        const cacheUrl = `${protocol}://${host}/cache/${encodeURIComponent(targetUrl)}`;
+        // Fallback to parsing the request URL if host header is not present
+        const actualHost = host || new URL(request.url).host;
+        const cacheUrl = `${protocol}://${actualHost}/cache/${encodeURIComponent(targetUrl)}`;
         const cacheRequest = new Request(cacheUrl);
 
         const cachedResponse = await cache.match(cacheRequest);
@@ -514,7 +516,9 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         const cache = (caches as any).default;
         // Use the actual host from the request to ensure valid URL
         const protocol = request.url.startsWith('https:') ? 'https' : 'http';
-        const cacheUrl = `${protocol}://${host}/cache/${encodeURIComponent(targetUrl)}`;
+        // Fallback to parsing the request URL if host header is not present
+        const actualHost = host || new URL(request.url).host;
+        const cacheUrl = `${protocol}://${actualHost}/cache/${encodeURIComponent(targetUrl)}`;
         const cacheRequest = new Request(cacheUrl);
         // We need to clone the response to be able to cache it
         await cache.put(cacheRequest, response.clone());
