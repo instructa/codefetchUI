@@ -152,9 +152,11 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
                 const { done, value } = await reader.read();
                 if (done) break;
 
+                // value is a Uint8Array, decode it to string
+                const text = new TextDecoder().decode(value);
                 const chunk = {
                   type: 'markdown',
-                  data: new TextDecoder().decode(value),
+                  data: text,
                 };
                 controller.enqueue(encoder.encode(JSON.stringify(chunk) + '\n'));
               }
@@ -187,10 +189,11 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         });
       }
 
-      // Non-streaming: use regular fetchFromWeb
+      // Non-streaming: use regular fetchFromWeb with JSON format to get file structure
       const result = await fetchFromWeb(targetUrl, {
         ...(githubToken && { token: githubToken }),
         maxTokens: 100000, // Set a reasonable token limit
+        format: 'json', // Get structured result with file tree, not markdown
       });
 
       // Debug: Log the result type and structure
