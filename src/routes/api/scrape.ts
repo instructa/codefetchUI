@@ -136,7 +136,9 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
 
       if (isWorkerEnvironment) {
         const cache = (caches as any).default;
-        const cacheUrl = `https://codefetch.ui/cache/${encodeURIComponent(targetUrl)}`;
+        // Use the actual host from the request to ensure valid URL
+        const protocol = request.url.startsWith('https:') ? 'https' : 'http';
+        const cacheUrl = `${protocol}://${host}/cache/${encodeURIComponent(targetUrl)}`;
         const cacheRequest = new Request(cacheUrl);
 
         const cachedResponse = await cache.match(cacheRequest);
@@ -510,7 +512,9 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // Cache the response if we're in a Cloudflare Workers environment
       if (isWorkerEnvironment) {
         const cache = (caches as any).default;
-        const cacheUrl = `https://codefetch.ui/cache/${encodeURIComponent(targetUrl)}`;
+        // Use the actual host from the request to ensure valid URL
+        const protocol = request.url.startsWith('https:') ? 'https' : 'http';
+        const cacheUrl = `${protocol}://${host}/cache/${encodeURIComponent(targetUrl)}`;
         const cacheRequest = new Request(cacheUrl);
         // We need to clone the response to be able to cache it
         await cache.put(cacheRequest, response.clone());
