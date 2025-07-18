@@ -12,8 +12,6 @@ import { Link } from '@tanstack/react-router';
 import {
   AuthUIContext,
   useOnSuccessTransition,
-  useIsHydrated,
-  useCaptcha,
 } from '@daveyplate/better-auth-ui';
 import type { AuthLocalization } from '@daveyplate/better-auth-ui';
 
@@ -33,7 +31,7 @@ type PasswordValidation = {
 };
 
 // Import captcha from the captcha subpath
-import { Captcha } from '@daveyplate/better-auth-ui/captcha';
+import { Captcha } from '~/components/auth/Captcha';
 
 // Import auth-specific UI components from better-auth-ui
 import { PasswordInput } from '@daveyplate/better-auth-ui';
@@ -51,6 +49,10 @@ import {
 } from '~/components/ui/form';
 import { Input } from '~/components/ui/input';
 import { formClassNames } from './auth-styles';
+
+// Local hook to detect hydration
+import { useIsHydrated } from '~/hooks/use-is-hydrated';
+import { useCaptcha } from '~/hooks/use-captcha';
 
 export interface SignInFormProps {
   className?: string;

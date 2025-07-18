@@ -7,12 +7,12 @@ import { useCallback, useContext, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-import { useCaptcha } from '@daveyplate/better-auth-ui';
-import { useIsHydrated } from '@daveyplate/better-auth-ui';
+import { useCaptcha } from '~/hooks/use-captcha';
+import { useIsHydrated } from '~/hooks/use-is-hydrated';
 import { AuthUIContext } from '@daveyplate/better-auth-ui';
 import { cn, getLocalizedError, getSearchParam } from '@daveyplate/better-auth-ui';
 import type { AuthLocalization } from '@daveyplate/better-auth-ui';
-import { Captcha } from '@daveyplate/better-auth-ui';
+import { Captcha } from '~/components/auth/Captcha';
 import { Button } from '@daveyplate/better-auth-ui';
 import {
   Form,

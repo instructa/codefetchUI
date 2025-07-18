@@ -1,6 +1,6 @@
 import type { IncomingRequestCfProperties } from '@cloudflare/workers-types';
 import { betterAuth } from 'better-auth';
-import { withCloudflare } from 'better-auth-cloudflare';
+import { withCloudflare } from './cloudflare-auth-adapter';
 import { reactStartCookies } from 'better-auth/react-start';
 import { magicLink } from 'better-auth/plugins';
 import { getAuthDb } from '~/db/db-config';
