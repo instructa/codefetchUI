@@ -36,8 +36,7 @@ import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Progress } from '~/components/ui/progress';
 import { Badge } from '~/components/ui/badge';
-import { FetchResultImpl, FileNode, countTokens } from 'codefetch-sdk';
-import prompts from 'codefetch-sdk/prompts';
+import { countTokens, type FileContent } from 'codefetch-sdk/worker';
 import { filterFileTree } from '~/utils/filter-file-tree';
 import { MarkdownPreview } from '~/components/markdown-preview';
 import {

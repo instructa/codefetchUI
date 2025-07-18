@@ -63,9 +63,12 @@
     "better-auth": "^1.2.12",
     "citty": "^0.1.6",
     "clsx": "^2.1.1",
+    "codefetch-sdk": "https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@11",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.3",
+    "fast-glob": "^3.3.3",
     "framer-motion": "^12.23.6",
+    "js-yaml": "^4.1.0",
     "lucide-react": "^0.525.0",
     "motion": "^12.23.6",
     "next-themes": "^0.4.6",
@@ -89,6 +92,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@ast-grep/napi": "^0.38.7",
     "@cloudflare/unenv-preset": "^2.3.3",
     "@cloudflare/workers-types": "latest",
     "@napi-rs/cli": "^2.18.4",
@@ -97,6 +101,7 @@
     "@tanstack/react-router-with-query": "^1.125.6",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.0.14",
     "@types/pg": "^8.15.4",
     "@types/react": "^19.1.8",

@@ -1,168 +1,25 @@
 // Web Worker for generating markdown preview
 import { filterFileTree } from '../../utils/filter-file-tree';
+import { generateMarkdownFromContent, countTokens, type FileContent } from 'codefetch-sdk/worker';
 import type { FileNode } from '../../lib/stores/scraped-data.store';
 
-// Simple token counting implementation
-async function countTokens(text: string, encoder: string): Promise<number> {
-  // Simple approximation: ~4 characters per token for English text
-  // This is a rough estimate that works reasonably well
-  if (encoder === 'cl100k' || encoder === 'o200k') {
-    return Math.ceil(text.length / 4);
-  } else if (encoder === 'p50k') {
-    return Math.ceil(text.length / 3.5);
-  }
-  // Default simple word-based counting
-  return text.split(/\s+/).length;
-}
+// Helper function to convert our FileNode to SDK FileContent
+function convertToFileContent(node: FileNode, basePath: string = ''): FileContent[] {
+  const files: FileContent[] = [];
 
-// Built-in prompts
-const prompts = {
-  codegen: `You are an expert software developer. Review the following codebase and generate new code based on the requirements.
-
-{{CURRENT_CODEBASE}}
-
-Requirements: {{MESSAGE}}
-
-Generate clean, well-documented code following the patterns and conventions found in the codebase.`,
-
-  fix: `You are an expert software developer. Review the following codebase and fix any issues or bugs.
-
-{{CURRENT_CODEBASE}}
-
-Issue description: {{MESSAGE}}
-
-Provide a detailed fix with explanations.`,
-
-  improve: `You are an expert software developer. Review the following codebase and suggest improvements.
-
-{{CURRENT_CODEBASE}}
-
-Areas to improve: {{MESSAGE}}
-
-Suggest specific improvements for code quality, performance, and maintainability.`,
-
-  testgen: `You are an expert software developer. Review the following codebase and generate comprehensive tests.
-
-{{CURRENT_CODEBASE}}
-
-Testing requirements: {{MESSAGE}}
-
-Generate thorough test cases covering edge cases and main functionality.`,
-};
-
-// Simple markdown generator
-class SimpleMarkdownGenerator {
-  private root: FileNode;
-  private url: string;
-
-  constructor(root: FileNode, url: string) {
-    this.root = root;
-    this.url = url;
-  }
-
-  toMarkdown(): string {
-    const metadata = this.getMetadata();
-    const content = this.generateContent(this.root);
-
-    return `# ${metadata.title}
-
-Source: ${this.url}
-Generated: ${new Date().toISOString()}
-
-${content}`;
-  }
-
-  private getMetadata() {
-    return {
-      title: this.root.name || 'Code Repository',
-      totalFiles: this.countFiles(this.root),
-      totalSize: this.calculateSize(this.root),
-    };
-  }
-
-  private countFiles(node: FileNode): number {
-    if (node.type === 'file') return 1;
-    return (node.children || []).reduce((sum, child) => sum + this.countFiles(child), 0);
-  }
-
-  private calculateSize(node: FileNode): number {
-    if (node.type === 'file') return node.size || 0;
-    return (node.children || []).reduce((sum, child) => sum + this.calculateSize(child), 0);
-  }
-
-  private generateContent(node: FileNode, depth: number = 0): string {
-    const indent = '  '.repeat(depth);
-
-    if (node.type === 'file') {
-      let content = `${indent}## ${node.path}\n\n`;
-      if (node.content) {
-        const language = this.getLanguage(node.name);
-        content += `${indent}\`\`\`${language}\n${node.content}\n${indent}\`\`\`\n\n`;
-      }
-      return content;
+  if (node.type === 'file' && node.content) {
+    files.push({
+      path: node.path,
+      content: node.content,
+      tokens: node.tokens,
+    });
+  } else if (node.type === 'directory' && node.children) {
+    for (const child of node.children) {
+      files.push(...convertToFileContent(child, node.path));
     }
-
-    // Directory
-    let content = '';
-    if (depth > 0) {
-      content += `${indent}### ${node.name}/\n\n`;
-    }
-
-    for (const child of node.children || []) {
-      content += this.generateContent(child, depth + 1);
-    }
-
-    return content;
   }
 
-  private getLanguage(filename: string): string {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
-    const langMap: Record<string, string> = {
-      ts: 'typescript',
-      tsx: 'typescript',
-      js: 'javascript',
-      jsx: 'javascript',
-      py: 'python',
-      java: 'java',
-      cpp: 'cpp',
-      c: 'c',
-      cs: 'csharp',
-      rb: 'ruby',
-      go: 'go',
-      rs: 'rust',
-      php: 'php',
-      swift: 'swift',
-      kt: 'kotlin',
-      scala: 'scala',
-      r: 'r',
-      md: 'markdown',
-      json: 'json',
-      yaml: 'yaml',
-      yml: 'yaml',
-      xml: 'xml',
-      html: 'html',
-      css: 'css',
-      scss: 'scss',
-      sass: 'sass',
-    };
-    return langMap[ext] || 'text';
-  }
-}
-
-// Helper function to convert our FileNode to SDK FileNode
-function convertToSDKFileNode(node: FileNode): any {
-  const sdkNode: any = {
-    name: node.name,
-    path: node.path,
-    type: node.type,
-    content: node.content,
-    language: node.language,
-    size: node.size,
-    tokens: node.tokens,
-    lastModified: node.lastModified,
-    children: node.children?.map(convertToSDKFileNode),
-  };
-  return sdkNode;
+  return files;
 }
 
 // Message types
@@ -256,42 +113,20 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
       return;
     }
 
-    // Generate markdown using SimpleMarkdownGenerator
-    const markdownGenerator = new SimpleMarkdownGenerator(filteredTree, url);
-    let markdown = markdownGenerator.toMarkdown();
+    // Generate markdown using FetchResultImpl
+    const fileContents = convertToFileContent(filteredTree);
+    let markdown = await generateMarkdownFromContent(fileContents, {
+      projectName: url,
+      includeTreeStructure: true,
+      contentOnly: false,
+    });
 
-    // Apply prompt template if selected
-    if (selectedPrompt && selectedPrompt !== 'none') {
-      let promptText = '';
-
-      // Access the prompts directly from the imported object
-      if (prompts && typeof prompts === 'object') {
-        switch (selectedPrompt) {
-          case 'codegen':
-            promptText = prompts.codegen || '';
-            break;
-          case 'fix':
-            promptText = prompts.fix || '';
-            break;
-          case 'improve':
-            promptText = prompts.improve || '';
-            break;
-          case 'testgen':
-            promptText = prompts.testgen || '';
-            break;
-        }
-      }
-
-      if (promptText) {
-        // Replace template variables
-        promptText = promptText.replace('{{CURRENT_CODEBASE}}', markdown);
-        promptText = promptText.replace('{{MESSAGE}}', ''); // Empty for now
-        markdown = promptText;
-      }
-    }
+    // TODO: Handle prompt templates if needed
+    // The prompts are no longer available from the SDK
+    // If we need prompt templates, they should be defined locally or passed as parameters
 
     // Count tokens
-    const tokenCount = await countTokens(markdown, tokenEncoder as any);
+    const tokenCount = countTokens(markdown, tokenEncoder as any);
 
     // Send result back to main thread
     const result: PreviewResultMessage = {

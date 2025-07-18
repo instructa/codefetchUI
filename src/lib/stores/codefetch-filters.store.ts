@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Define TokenEncoder type locally
-export type TokenEncoder = 'simple' | 'p50k' | 'cl100k' | 'o200k';
+// Define TokenEncoder type locally since it's not exported from codefetch-sdk/worker
+export type TokenEncoder = 'simple' | 'p50k' | 'o200k' | 'cl100k';
 
 export type TokenLimiter = 'truncated' | 'spread';
 
