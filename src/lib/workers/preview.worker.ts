@@ -3,6 +3,12 @@ import { filterFileTree } from '../../utils/filter-file-tree';
 import { generateMarkdownFromContent, countTokens, type FileContent } from 'codefetch-sdk/worker';
 import type { FileNode } from '../../lib/stores/scraped-data.store';
 
+// Import local prompts
+import codegenPrompt from '../prompts/codegen';
+import fixPrompt from '../prompts/fix';
+import improvePrompt from '../prompts/improve';
+import testgenPrompt from '../prompts/testgen';
+
 // Helper function to convert our FileNode to SDK FileContent
 function convertToFileContent(node: FileNode, basePath: string = ''): FileContent[] {
   const files: FileContent[] = [];
@@ -123,31 +129,18 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
     // Apply prompt template if selected
     if (selectedPrompt && selectedPrompt !== 'none') {
       const promptTemplates: Record<string, string> = {
-        codegen: `# Code Generation Task
-
-Please generate code based on the following codebase:
-
-`,
-        fix: `# Code Fix Request
-
-Please review the following code and fix any issues:
-
-`,
-        improve: `# Code Improvement Request
-
-Please suggest improvements for the following codebase:
-
-`,
-        testgen: `# Test Generation Task
-
-Please generate tests for the following code:
-
-`,
+        codegen: codegenPrompt,
+        fix: fixPrompt,
+        improve: improvePrompt,
+        testgen: testgenPrompt,
       };
 
       const promptTemplate = promptTemplates[selectedPrompt];
       if (promptTemplate) {
-        markdown = promptTemplate + markdown;
+        // Replace the {{CURRENT_CODEBASE}} placeholder with the generated markdown
+        markdown = promptTemplate.replace('{{CURRENT_CODEBASE}}', markdown);
+        // Handle any {{MESSAGE}} placeholder if present (can be empty for now)
+        markdown = markdown.replace('{{MESSAGE}}', '');
       }
     }
 
