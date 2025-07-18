@@ -255,14 +255,6 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         format: 'json', // Get structured result with file tree, not markdown
       });
 
-      // Debug: Log the result type and structure
-      console.log('fetchFromWeb result type:', typeof result);
-      if (typeof result === 'string') {
-        console.log('Result is a string (markdown), length:', result.length);
-      } else {
-        console.log('fetchFromWeb result structure:', JSON.stringify(result, null, 2));
-      }
-
       // Handle different response types from fetchFromWeb
       let root: FileNode;
       let metadata: ScrapeMetadata;
@@ -392,8 +384,6 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
           totalFiles: result.metadata?.totalFiles,
           totalSize: result.metadata?.totalSize,
           totalTokens: result.metadata?.totalTokens,
-          title: result.metadata?.title,
-          description: result.metadata?.description,
         };
       } else {
         // Unexpected response format
