@@ -9,6 +9,81 @@ import fixPrompt from '../prompts/fix';
 import improvePrompt from '../prompts/improve';
 import testgenPrompt from '../prompts/testgen';
 
+// Cache for tokenizer data files
+const tokenizerDataCache = new Map<string, Response>();
+
+// Wrap the global fetch to cache tokenizer data files
+const originalFetch = self.fetch;
+self.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const url =
+    typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+  // Check if this is a tokenizer vocabulary file request
+  if (
+    url &&
+    (url.includes('p50k_base.json') ||
+      url.includes('cl100k_base.json') ||
+      url.includes('o200k_base.json'))
+  ) {
+    // Check cache first
+    if (tokenizerDataCache.has(url)) {
+      console.log(`[Preview Worker] Using cached tokenizer data for: ${url.split('/').pop()}`);
+      return tokenizerDataCache.get(url)!.clone();
+    }
+
+    console.log(`[Preview Worker] Fetching tokenizer data: ${url.split('/').pop()}`);
+
+    // Fetch and cache
+    const response = await originalFetch(input, init);
+
+    // Clone the response before caching (since responses can only be read once)
+    const responseToCache = response.clone();
+    tokenizerDataCache.set(url, responseToCache);
+
+    return response;
+  }
+
+  // For non-tokenizer requests, use original fetch
+  return originalFetch(input, init);
+};
+
+// Cache for tokenizer initialization
+let tokenizerCache: Map<string, any> = new Map();
+let tokenizerInitPromises: Map<string, Promise<void>> = new Map();
+
+// Helper function to ensure tokenizer is initialized only once
+async function ensureTokenizerInitialized(encoder: string): Promise<void> {
+  // If already initialized, return immediately
+  if (tokenizerCache.has(encoder)) {
+    return;
+  }
+
+  // If initialization is in progress, wait for it
+  if (tokenizerInitPromises.has(encoder)) {
+    return tokenizerInitPromises.get(encoder)!;
+  }
+
+  // Start initialization
+  const initPromise = (async () => {
+    try {
+      console.log(`[Preview Worker] Initializing tokenizer: ${encoder}`);
+      // Pre-warm the tokenizer by doing a small count
+      // This forces the SDK to load the tokenizer data
+      await countTokens('test', encoder as any);
+      tokenizerCache.set(encoder, true);
+      console.log(`[Preview Worker] Tokenizer initialized: ${encoder}`);
+    } catch (error) {
+      console.error(`[Preview Worker] Failed to initialize tokenizer ${encoder}:`, error);
+      throw error;
+    } finally {
+      tokenizerInitPromises.delete(encoder);
+    }
+  })();
+
+  tokenizerInitPromises.set(encoder, initPromise);
+  return initPromise;
+}
+
 // Helper function to convert our FileNode to SDK FileContent
 function convertToFileContent(node: FileNode, basePath: string = ''): FileContent[] {
   const files: FileContent[] = [];
@@ -77,6 +152,9 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
       tokenEncoder,
     } = event.data.data;
 
+    // Ensure tokenizer is initialized before processing
+    await ensureTokenizerInitialized(tokenEncoder);
+
     // Convert arrays back to Sets
     const manualSelections = {
       checked: new Set(manualSelectionsChecked),
@@ -144,7 +222,7 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
       }
     }
 
-    // Count tokens
+    // Count tokens (tokenizer should already be cached)
     const tokenCount = await countTokens(markdown, tokenEncoder as any);
 
     // Send result back to main thread

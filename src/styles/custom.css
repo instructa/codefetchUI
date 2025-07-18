@@ -1,0 +1,175 @@
+/* Enhanced Button Styles */
+.button-enhanced {
+  @apply rounded-md shadow-xs hover:shadow-sm active:shadow-2xs;
+  @apply transition-all duration-200 ease-out;
+  @apply border border-border-subtle;
+}
+
+.button-primary {
+  @apply bg-primary text-primary-foreground;
+  @apply hover:brightness-110 active:brightness-95;
+}
+
+.button-secondary {
+  @apply bg-surface-elevated;
+  @apply hover:bg-accent/10;
+}
+
+.button-ghost {
+  @apply shadow-none border-transparent;
+  @apply hover:bg-accent/5 hover:border-border-subtle;
+}
+
+/* Enhanced Card Styles */
+.card-enhanced {
+  @apply rounded-lg bg-card shadow-sm;
+  @apply border border-border-subtle;
+  @apply transition-shadow duration-200;
+}
+
+.card-interactive {
+  @apply hover:shadow-md hover:border-border;
+  @apply cursor-pointer;
+}
+
+.card-elevated {
+  @apply bg-surface-elevated shadow-md;
+}
+
+/* Enhanced Input Styles */
+.input-enhanced {
+  @apply rounded-md border-border-subtle bg-surface-elevated;
+  @apply focus:border-primary focus:ring-2 focus:ring-primary/20;
+  @apply placeholder:text-muted-foreground/60;
+  @apply transition-all duration-200;
+}
+
+/* Typography System */
+.text-display {
+  @apply text-4xl font-semibold tracking-tight;
+}
+
+.text-headline {
+  @apply text-2xl font-semibold tracking-tight;
+}
+
+.text-title {
+  @apply text-lg font-medium;
+}
+
+.text-body {
+  @apply text-base leading-relaxed;
+}
+
+.text-body-sm {
+  @apply text-sm leading-relaxed;
+}
+
+.text-caption {
+  @apply text-xs text-muted-foreground;
+}
+
+/* Improved readability */
+.prose-enhanced {
+  @apply leading-relaxed tracking-normal;
+  @apply text-foreground/90;
+}
+
+/* Consistent Spacing */
+.container-comfortable {
+  @apply p-6 space-y-6;
+}
+
+.container-compact {
+  @apply p-4 space-y-4;
+}
+
+.container-tight {
+  @apply p-3 space-y-3;
+}
+
+/* Section spacing */
+.section-spacing {
+  @apply mb-8 last:mb-0;
+}
+
+/* Element spacing */
+.element-spacing {
+  @apply mb-4 last:mb-0;
+}
+
+/* Smooth Transitions */
+.transition-smooth {
+  @apply transition-all duration-200 ease-out;
+}
+
+.transition-colors {
+  @apply transition-colors duration-150 ease-out;
+}
+
+.transition-transform {
+  @apply transition-transform duration-200 ease-out;
+}
+
+/* Hover States */
+.hover-lift {
+  @apply hover:-translate-y-0.5 hover:shadow-lg;
+}
+
+.hover-grow {
+  @apply hover:scale-[1.02];
+}
+
+/* Focus States */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+}
+
+/* Dividers */
+.divider-horizontal {
+  @apply border-b border-border-subtle;
+}
+
+.divider-vertical {
+  @apply border-r border-border-subtle;
+}
+
+/* Badge Variations */
+.badge-subtle {
+  @apply bg-muted/50 text-muted-foreground border-border-subtle;
+}
+
+.badge-primary {
+  @apply bg-primary/10 text-primary border-primary/20;
+}
+
+/* List Styles */
+.list-comfortable {
+  @apply space-y-2;
+}
+
+.list-compact {
+  @apply space-y-1;
+}
+
+/* Surface Elevations */
+.surface-base {
+  @apply bg-background;
+}
+
+.surface-elevated {
+  @apply bg-surface-elevated;
+}
+
+.surface-sunken {
+  @apply bg-surface-sunken;
+}
+
+/* Border Utilities */
+.border-subtle {
+  @apply border-border-subtle;
+}
+
+.border-strong {
+  @apply border-border-strong;
+}

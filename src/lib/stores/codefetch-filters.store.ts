@@ -158,7 +158,7 @@ const defaultFilters = {
   extensions: ['.ts', '.tsx', '.js', '.jsx'],
   customExtensions: '',
   maxTokens: 100000,
-  tokenEncoder: 'cl100k' as TokenEncoder,
+  tokenEncoder: 'simple' as TokenEncoder, // Changed from 'cl100k' to 'simple' to avoid loading large vocabulary files
   tokenLimiter: 'truncated' as TokenLimiter,
   includeFiles: [],
   excludeFiles: [],

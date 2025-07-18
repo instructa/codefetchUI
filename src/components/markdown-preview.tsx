@@ -10,38 +10,38 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   const formatMarkdown = (text: string) => {
     // Guard against undefined or null content
     if (!text) {
-      return <p className="text-muted-foreground">No content to display</p>;
+      return <p className="text-muted-foreground text-xs">No content to display</p>;
     }
 
     return text.split('\n').map((line, index) => {
-      // Headers
+      // Headers - same size as regular text, just bold
       if (line.startsWith('# ')) {
         return (
-          <h1 key={index} className="text-2xl font-bold mb-4 mt-6 first:mt-0 text-foreground">
+          <div key={index} className="text-xs font-bold">
             {line.substring(2)}
-          </h1>
+          </div>
         );
       }
       if (line.startsWith('## ')) {
         return (
-          <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">
+          <div key={index} className="text-xs font-semibold">
             {line.substring(3)}
-          </h2>
+          </div>
         );
       }
       if (line.startsWith('### ')) {
         return (
-          <h3 key={index} className="text-lg font-semibold mb-2 mt-4 text-foreground">
+          <div key={index} className="text-xs font-medium">
             {line.substring(4)}
-          </h3>
+          </div>
         );
       }
 
       // Code blocks (simple detection)
       if (line.startsWith('```')) {
         return (
-          <div key={index} className="my-2">
-            <code className="text-xs text-muted-foreground">{line}</code>
+          <div key={index} className="text-xs text-muted-foreground">
+            {line}
           </div>
         );
       }
@@ -49,22 +49,22 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       // List items
       if (line.startsWith('- ') || line.startsWith('* ')) {
         return (
-          <li key={index} className="ml-4 list-disc">
-            {line.substring(2)}
-          </li>
+          <div key={index} className="text-xs pl-4">
+            • {line.substring(2)}
+          </div>
         );
       }
 
       // Empty lines
       if (line.trim() === '') {
-        return <br key={index} />;
+        return <div key={index} className="h-2" />;
       }
 
       // Regular paragraphs
       return (
-        <p key={index} className="mb-2">
+        <div key={index} className="text-xs">
           {line}
-        </p>
+        </div>
       );
     });
   };
@@ -72,11 +72,13 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   return (
     <div
       className={cn(
-        'prose prose-sm max-w-none dark:prose-invert overflow-auto h-full p-4',
+        'overflow-auto h-full p-4',
+        'bg-surface-sunken border border-border-subtle rounded-lg',
+        'font-mono text-xs text-foreground/80',
         className
       )}
     >
-      <div className="space-y-1 whitespace-pre-wrap font-mono">{formatMarkdown(content || '')}</div>
+      <div className="whitespace-pre-wrap leading-relaxed">{formatMarkdown(content || '')}</div>
     </div>
   );
 }
