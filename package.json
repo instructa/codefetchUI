@@ -63,6 +63,7 @@
     "better-auth": "^1.2.12",
     "citty": "^0.1.6",
     "clsx": "^2.1.1",
+    "codefetch-sdk": "https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@12",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.3",
     "fast-glob": "^3.3.3",

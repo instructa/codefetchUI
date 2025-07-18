@@ -205,24 +205,27 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         });
       }
 
-      // fetchFromWeb returns a FetchResult with files array and metadata
-      if (!result || !('files' in result)) {
+      // fetchFromWeb returns a FetchResultImpl with root and metadata
+      if (!result || !('root' in result)) {
         console.error('Invalid result structure:', result);
         return Response.json({ error: 'Invalid response from codefetch' }, { status: 500 });
       }
+
+      // Get all files from the FetchResultImpl
+      const allFiles = result.getAllFiles();
 
       // Convert files array to tree structure for backward compatibility
       const root = {
         name: result.metadata?.source || 'root',
         path: '',
         type: 'directory' as const,
-        children: result.files.map((file) => ({
+        children: allFiles.map((file) => ({
           name: file.path.split('/').pop() || file.path,
           path: file.path,
           type: 'file' as const,
-          content: file.content,
+          content: file.content || '',
           language: file.language,
-          size: file.content.length,
+          size: file.content ? file.content.length : 0,
           tokens: file.tokens || 0,
         })),
       };

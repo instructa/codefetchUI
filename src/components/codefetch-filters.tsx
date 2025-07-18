@@ -4,8 +4,8 @@ import {
   useCodefetchFilters,
   COMMON_EXTENSIONS,
   TOKEN_PRESETS,
-  type TokenEncoder,
 } from '~/lib/stores/codefetch-filters.store';
+import type { TokenEncoder } from 'codefetch-sdk/worker';
 import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import { usePreviewGenerator } from '~/hooks/use-preview-generator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';

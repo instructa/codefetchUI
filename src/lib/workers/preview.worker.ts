@@ -116,9 +116,8 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
     // Generate markdown using FetchResultImpl
     const fileContents = convertToFileContent(filteredTree);
     let markdown = await generateMarkdownFromContent(fileContents, {
-      projectName: url,
       includeTreeStructure: true,
-      contentOnly: false,
+      tokenEncoder: tokenEncoder as any,
     });
 
     // TODO: Handle prompt templates if needed
@@ -126,7 +125,7 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
     // If we need prompt templates, they should be defined locally or passed as parameters
 
     // Count tokens
-    const tokenCount = countTokens(markdown, tokenEncoder as any);
+    const tokenCount = await countTokens(markdown, tokenEncoder as any);
 
     // Send result back to main thread
     const result: PreviewResultMessage = {
