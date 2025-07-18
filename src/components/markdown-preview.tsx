@@ -1,13 +1,18 @@
 import { cn } from '~/lib/utils';
 
 interface MarkdownPreviewProps {
-  content: string;
+  content?: string;
   className?: string;
 }
 
 export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   // Simple markdown to HTML conversion for basic formatting
   const formatMarkdown = (text: string) => {
+    // Guard against undefined or null content
+    if (!text) {
+      return <p className="text-muted-foreground">No content to display</p>;
+    }
+
     return text.split('\n').map((line, index) => {
       // Headers
       if (line.startsWith('# ')) {
@@ -71,7 +76,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
         className
       )}
     >
-      <div className="space-y-1 whitespace-pre-wrap font-mono">{formatMarkdown(content)}</div>
+      <div className="space-y-1 whitespace-pre-wrap font-mono">{formatMarkdown(content || '')}</div>
     </div>
   );
 }

@@ -466,10 +466,10 @@ function searchFiles(node: FileNode, query: string): FileNode[] {
 export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileTreeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const filters = useCodefetchFilters();
   const [prevFilters, setPrevFilters] = useState(filters);
-  const { manualSelections, setManualSelections } = useScrapedDataStore();
+  const { manualSelections, setManualSelections, expandedPaths, toggleExpandedPath } =
+    useScrapedDataStore();
 
   // Reset manual selections when filters change
   useEffect(() => {
@@ -541,18 +541,6 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
 
     return countSelected(data);
   }, [data, filters, manualSelections]);
-
-  const toggleExpandedPath = (path: string) => {
-    setExpandedPaths((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(path)) {
-        newSet.delete(path);
-      } else {
-        newSet.add(path);
-      }
-      return newSet;
-    });
-  };
 
   const handleFileSelect = (path: string) => {
     const file = findFileByPath(data, path);

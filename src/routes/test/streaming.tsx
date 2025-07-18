@@ -148,7 +148,7 @@ function StreamingTestComponent() {
                 <TabsContent value="content" className="h-[550px]">
                   <ScrollArea className="h-full border rounded p-4">
                     {markdown ? (
-                      <MarkdownPreview markdown={markdown} />
+                      <MarkdownPreview content={markdown} />
                     ) : (
                       <p className="text-muted-foreground">No content yet...</p>
                     )}

@@ -306,21 +306,92 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       // Get all files from the FetchResultImpl
       const allFiles = result.getAllFiles();
 
+      // Helper function to build a proper tree structure from flat file list
+      function buildTreeFromFiles(files: Array<any>) {
+        const root = {
+          name: result.metadata?.source || 'root',
+          path: '',
+          type: 'directory' as const,
+          children: [] as any[],
+        };
+
+        // Create a map to store directory nodes
+        const nodeMap = new Map<string, any>();
+        nodeMap.set('', root);
+
+        // Sort files by path depth to ensure parent directories are created first
+        const sortedFiles = [...files].sort((a, b) => {
+          const depthA = a.path.split('/').length;
+          const depthB = b.path.split('/').length;
+          return depthA - depthB;
+        });
+
+        for (const file of sortedFiles) {
+          const pathParts = file.path.split('/');
+          const fileName = pathParts.pop() || file.path;
+          const dirPath = pathParts.join('/');
+
+          // Create directory nodes if they don't exist
+          let currentPath = '';
+          for (let i = 0; i < pathParts.length; i++) {
+            const parentPath = currentPath;
+            currentPath = i === 0 ? pathParts[i] : `${currentPath}/${pathParts[i]}`;
+
+            if (!nodeMap.has(currentPath)) {
+              const dirNode = {
+                name: pathParts[i],
+                path: currentPath,
+                type: 'directory' as const,
+                children: [],
+              };
+
+              const parentNode = nodeMap.get(parentPath) || root;
+              parentNode.children.push(dirNode);
+              nodeMap.set(currentPath, dirNode);
+            }
+          }
+
+          // Add the file to its parent directory
+          const fileNode = {
+            name: fileName,
+            path: file.path,
+            type: 'file' as const,
+            content: file.content || '',
+            language: file.language,
+            size: file.content ? file.content.length : 0,
+            tokens: file.tokens || 0,
+          };
+
+          const parentNode = nodeMap.get(dirPath) || root;
+          parentNode.children.push(fileNode);
+        }
+
+        // Sort children at each level: directories first, then files
+        function sortChildren(node: any) {
+          if (node.children && node.children.length > 0) {
+            node.children.sort((a: any, b: any) => {
+              // Directories come first
+              if (a.type === 'directory' && b.type === 'file') return -1;
+              if (a.type === 'file' && b.type === 'directory') return 1;
+              // Same type: sort alphabetically by name
+              return a.name.localeCompare(b.name);
+            });
+
+            // Recursively sort children of directories
+            for (const child of node.children) {
+              if (child.type === 'directory') {
+                sortChildren(child);
+              }
+            }
+          }
+        }
+
+        sortChildren(root);
+        return root;
+      }
+
       // Convert files array to tree structure for backward compatibility
-      const root = {
-        name: result.metadata?.source || 'root',
-        path: '',
-        type: 'directory' as const,
-        children: allFiles.map((file) => ({
-          name: file.path.split('/').pop() || file.path,
-          path: file.path,
-          type: 'file' as const,
-          content: file.content || '',
-          language: file.language,
-          size: file.content ? file.content.length : 0,
-          tokens: file.tokens || 0,
-        })),
-      };
+      const root = buildTreeFromFiles(allFiles);
 
       // Store the repository data for later searches
       try {
