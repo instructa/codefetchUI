@@ -333,11 +333,11 @@ export function CodefetchFilters() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="files" className="space-y-2 mt-2">
+                <TabsContent value="files" className="space-y-4 mt-4">
                   {/* Include Files */}
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Include Files</Label>
-                    <div className="flex gap-1">
+                  <div className="element-spacing">
+                    <Label className="text-body-sm">Include Files</Label>
+                    <div className="flex gap-2 mt-1.5">
                       <Input
                         placeholder="e.g., **/test/*.ts"
                         value={newIncludeFile}
@@ -351,7 +351,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-[11px] h-7 rounded-none"
+                        className="font-mono text-body-sm input-enhanced"
                       />
                       <Button
                         size="icon"
@@ -362,24 +362,24 @@ export function CodefetchFilters() {
                             filters.addIncludeFile
                           )
                         }
-                        className="h-7 w-7 rounded-none"
+                        className="h-10 w-10 rounded-md shadow-xs hover:shadow-sm transition-smooth"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {filters.includeFiles.map((pattern) => (
                         <Badge
                           key={pattern}
                           variant="secondary"
-                          className="gap-0.5 py-0 px-1.5 h-5 rounded-none"
+                          className="gap-1 py-1 px-2.5 h-auto rounded-md badge-primary"
                         >
-                          <span className="font-mono text-[10px]">{pattern}</span>
+                          <span className="font-mono text-xs">{pattern}</span>
                           <button
                             onClick={() => filters.removeIncludeFile(pattern)}
-                            className="ml-0.5 hover:text-destructive"
+                            className="ml-1 hover:text-destructive transition-colors"
                           >
-                            <X className="h-2.5 w-2.5" />
+                            <X className="h-3 w-3" />
                           </button>
                         </Badge>
                       ))}
@@ -387,9 +387,9 @@ export function CodefetchFilters() {
                   </div>
 
                   {/* Exclude Files */}
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Exclude Files</Label>
-                    <div className="flex gap-1">
+                  <div className="element-spacing">
+                    <Label className="text-body-sm">Exclude Files</Label>
+                    <div className="flex gap-2 mt-1.5">
                       <Input
                         placeholder="e.g., *.test.ts"
                         value={newExcludeFile}
@@ -403,7 +403,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-[11px] h-7 rounded-none"
+                        className="font-mono text-body-sm input-enhanced"
                       />
                       <Button
                         size="icon"
@@ -414,24 +414,24 @@ export function CodefetchFilters() {
                             filters.addExcludeFile
                           )
                         }
-                        className="h-7 w-7 rounded-none"
+                        className="h-10 w-10 rounded-md shadow-xs hover:shadow-sm transition-smooth"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {filters.excludeFiles.map((pattern) => (
                         <Badge
                           key={pattern}
                           variant="outline"
-                          className="gap-0.5 py-0 px-1.5 h-5 rounded-none"
+                          className="gap-1 py-1 px-2.5 h-auto rounded-md badge-subtle"
                         >
-                          <span className="font-mono text-[10px]">{pattern}</span>
+                          <span className="font-mono text-xs">{pattern}</span>
                           <button
                             onClick={() => filters.removeExcludeFile(pattern)}
-                            className="ml-0.5 hover:text-destructive"
+                            className="ml-1 hover:text-destructive transition-colors"
                           >
-                            <X className="h-2.5 w-2.5" />
+                            <X className="h-3 w-3" />
                           </button>
                         </Badge>
                       ))}
@@ -541,25 +541,32 @@ export function CodefetchFilters() {
           </Card>
 
           {/* Display Options */}
-          <Card className="rounded-none border-0 border-b">
-            <CardHeader className="p-2">
+          <Card className="card-enhanced section-spacing">
+            <CardHeader className="container-compact border-b border-border-subtle">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-1.5 text-xs">
-                    <Eye className="h-3 w-3" />
+                  <CardTitle className="flex items-center gap-2 text-title">
+                    <Eye className="h-4 w-4" />
                     Display Options
                   </CardTitle>
-                  <CardDescription className="text-[10px]">
+                  <CardDescription className="text-body-sm">
                     Configure how the output is displayed
                   </CardDescription>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-none">
-                      <Settings className="h-3 w-3" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 button-ghost rounded-md transition-smooth"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72 rounded-none">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-80 rounded-lg shadow-lg border-border-subtle"
+                  >
                     <DropdownMenuLabel className="text-xs">Token Settings</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <div className="p-2 space-y-3">
@@ -698,83 +705,79 @@ export function CodefetchFilters() {
                 </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent className="p-2 pt-0 space-y-3">
+            <CardContent className="container-compact">
               {/* Project Tree Depth */}
-              <div className="space-y-1">
-                <Label className="text-[10px]">Project Tree Depth</Label>
-                <div className="flex items-center gap-2">
+              <div className="element-spacing">
+                <Label className="text-body-sm">Project Tree Depth</Label>
+                <div className="flex items-center gap-3 mt-2">
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-6 w-6 rounded-none"
+                    className="h-9 w-9 rounded-md shadow-xs hover:shadow-sm transition-smooth"
                     onClick={() => filters.setProjectTreeDepth(filters.projectTreeDepth - 1)}
                     disabled={filters.projectTreeDepth === 0}
                   >
-                    <Minus className="h-2.5 w-2.5" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <div className="w-12 text-center">
-                    <span className="text-sm font-medium">{filters.projectTreeDepth}</span>
+                  <div className="w-16 text-center">
+                    <span className="text-lg font-medium">{filters.projectTreeDepth}</span>
                   </div>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-6 w-6 rounded-none"
+                    className="h-9 w-9 rounded-md shadow-xs hover:shadow-sm transition-smooth"
                     onClick={() => filters.setProjectTreeDepth(filters.projectTreeDepth + 1)}
                     disabled={filters.projectTreeDepth === 10}
                   >
-                    <Plus className="h-2.5 w-2.5" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <p className="text-[9px] text-muted-foreground">
-                  0 = no tree, higher values show more depth
-                </p>
+                <p className="text-caption mt-2">0 = no tree, higher values show more depth</p>
               </div>
 
               {/* Prompt Selection */}
-              <div className="space-y-1">
-                <Label className="text-[10px]">AI Prompt Template</Label>
+              <div className="element-spacing">
+                <Label className="text-body-sm">AI Prompt Template</Label>
                 <Select value={filters.selectedPrompt} onValueChange={filters.setSelectedPrompt}>
-                  <SelectTrigger className="h-7 text-[11px] rounded-none">
+                  <SelectTrigger className="h-10 text-body-sm rounded-md input-enhanced mt-1.5">
                     <SelectValue placeholder="Select a prompt template" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-[11px]">
+                  <SelectContent className="rounded-md shadow-lg">
+                    <SelectItem value="none" className="text-body-sm">
                       No prompt
                     </SelectItem>
-                    <SelectItem value="codegen" className="text-[11px]">
+                    <SelectItem value="codegen" className="text-body-sm">
                       Code Generation
                     </SelectItem>
-                    <SelectItem value="fix" className="text-[11px]">
+                    <SelectItem value="fix" className="text-body-sm">
                       Fix Issues
                     </SelectItem>
-                    <SelectItem value="improve" className="text-[11px]">
+                    <SelectItem value="improve" className="text-body-sm">
                       Improve Code
                     </SelectItem>
-                    <SelectItem value="testgen" className="text-[11px]">
+                    <SelectItem value="testgen" className="text-body-sm">
                       Generate Tests
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-[9px] text-muted-foreground">
+                <p className="text-caption mt-1.5">
                   Prepend an AI prompt template to the markdown output
                 </p>
               </div>
 
               {/* Line Numbers */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="line-numbers" className="text-[10px]">
+              <div className="flex items-center justify-between element-spacing">
+                <div className="space-y-1">
+                  <Label htmlFor="line-numbers" className="text-body-sm">
                     Disable Line Numbers
                   </Label>
-                  <p className="text-[9px] text-muted-foreground">
-                    Hide line numbers in code blocks
-                  </p>
+                  <p className="text-caption">Hide line numbers in code blocks</p>
                 </div>
                 <Checkbox
                   id="line-numbers"
                   checked={filters.disableLineNumbers}
                   onCheckedChange={filters.setDisableLineNumbers}
-                  className="h-3.5 w-3.5 rounded-none"
+                  className="h-4 w-4 rounded"
                 />
               </div>
             </CardContent>

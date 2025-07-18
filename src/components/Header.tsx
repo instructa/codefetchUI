@@ -5,45 +5,46 @@ import { Button } from './ui/button';
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/60 px-4 py-3 backdrop-blur">
-      <div className="container mx-auto flex items-center justify-between">
-        <Link to="/" className="font-bold text-2xl text-foreground">
-          ex0
-        </Link>
+    <header className="sticky top-0 z-50 border-b border-border-subtle bg-surface-elevated/80 backdrop-blur-lg shadow-sm">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-headline hover:text-primary transition-colors">
+            ex0
+          </Link>
 
-        <nav className="flex items-center gap-6">
-          {/* <SignedIn>
+          <nav className="flex items-center gap-8">
+            {/* <SignedIn>
 						<Link
 							to="/dashboard"
-							className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+							className="text-body-sm font-medium text-muted-foreground hover:text-foreground transition-smooth"
 						>
 							Dashboard
 						</Link>
 					</SignedIn> */}
-          <a
-            href="https://github.com/instructa/constructa-starter"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-          >
-            GitHub
-            <svg
-              className="w-3 h-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+            <a
+              href="https://github.com/instructa/constructa-starter"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-body-sm font-medium text-muted-foreground hover:text-foreground transition-smooth flex items-center gap-1.5"
             >
-              <title>External link icon</title>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              />
-            </svg>
-          </a>
-          <ModeToggle />
+              GitHub
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <title>External link icon</title>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+            </a>
+            <ModeToggle />
 
           {/* <SignedOut>
 						<Link to="/auth/$pathname" params={{ pathname: "sign-in" }}>
