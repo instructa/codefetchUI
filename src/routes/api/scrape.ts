@@ -265,6 +265,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
           ...(githubToken && { token: githubToken }),
           maxTokens: 100000, // Set a reasonable token limit
           format: 'json', // Get structured result with file tree, not markdown
+          noCache: true, // Bypass SDK cache to avoid Cloudflare Cache API errors
         });
       } catch (fetchError) {
         console.error('[Scrape API] fetchFromWeb failed:', fetchError);
