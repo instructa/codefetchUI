@@ -120,9 +120,36 @@ self.addEventListener('message', async (event: MessageEvent<GeneratePreviewMessa
       tokenEncoder: tokenEncoder as any,
     });
 
-    // TODO: Handle prompt templates if needed
-    // The prompts are no longer available from the SDK
-    // If we need prompt templates, they should be defined locally or passed as parameters
+    // Apply prompt template if selected
+    if (selectedPrompt && selectedPrompt !== 'none') {
+      const promptTemplates: Record<string, string> = {
+        codegen: `# Code Generation Task
+
+Please generate code based on the following codebase:
+
+`,
+        fix: `# Code Fix Request
+
+Please review the following code and fix any issues:
+
+`,
+        improve: `# Code Improvement Request
+
+Please suggest improvements for the following codebase:
+
+`,
+        testgen: `# Test Generation Task
+
+Please generate tests for the following code:
+
+`,
+      };
+
+      const promptTemplate = promptTemplates[selectedPrompt];
+      if (promptTemplate) {
+        markdown = promptTemplate + markdown;
+      }
+    }
 
     // Count tokens
     const tokenCount = await countTokens(markdown, tokenEncoder as any);
