@@ -66,25 +66,154 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
     }
 
     try {
-      // In Cloudflare Workers, always disable filesystem cache
-      const isWorkerEnvironment = (context as any)?.AUTH_DB;
+      // In Cloudflare Workers, we can use the Cache API
+      // Check if we're in a Cloudflare Workers environment
+      const isWorkerEnvironment = typeof caches !== 'undefined';
+
+      if (isWorkerEnvironment) {
+        const cache = (caches as any).default;
+        const cacheUrl = `https://codefetch.ui/cache/${encodeURIComponent(targetUrl)}`;
+        const cacheRequest = new Request(cacheUrl);
+
+        const cachedResponse = await cache.match(cacheRequest);
+        if (cachedResponse) {
+          // Add rate limiting headers to the cached response
+          const remaining = await universalRateLimiter.getRemainingRequests(
+            clientIp,
+            rateLimiterContext
+          );
+          const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
+
+          const newHeaders = new Headers(cachedResponse.headers);
+          newHeaders.set('X-RateLimit-Limit', '10');
+          newHeaders.set('X-RateLimit-Remaining', String(remaining));
+          newHeaders.set('X-RateLimit-Reset', String(Math.floor(resetTime / 1000)));
+
+          return new Response(cachedResponse.body, {
+            status: cachedResponse.status,
+            statusText: cachedResponse.statusText,
+            headers: newHeaders,
+          });
+        }
+      }
 
       // Get GitHub token from environment if available
       const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
 
-      const result: FetchResult = await fetchFromWeb(targetUrl, {
+      const result = await fetchFromWeb(targetUrl, {
         ...(githubToken && { token: githubToken }),
         maxTokens: 100000, // Set a reasonable token limit
       });
 
+      // Debug: Log the result type and structure
+      console.log('fetchFromWeb result type:', typeof result);
+      if (typeof result === 'string') {
+        console.log('Result is a string (markdown), length:', result.length);
+      } else {
+        console.log('fetchFromWeb result structure:', JSON.stringify(result, null, 2));
+      }
+
+      // Check if fetchFromWeb returned markdown directly as a string
+      if (typeof result === 'string') {
+        // It returned markdown directly, we need to parse it back into files
+        // For now, return a simple structure
+        const root = {
+          name: targetUrl,
+          path: '',
+          type: 'directory' as const,
+          children: [
+            {
+              name: 'README.md',
+              path: 'README.md',
+              type: 'file' as const,
+              content: result,
+              language: 'markdown',
+              size: result.length,
+              tokens: 0,
+            },
+          ],
+        };
+
+        // Create a streaming response
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            // Send metadata
+            const metadata = {
+              type: 'metadata',
+              data: {
+                url: targetUrl,
+                scrapedAt: new Date().toISOString(),
+                title: 'Scraped Content',
+                description: `Source: ${targetUrl}`,
+                totalFiles: 1,
+                totalSize: result.length,
+                totalTokens: 0,
+              },
+            };
+            controller.enqueue(encoder.encode(JSON.stringify(metadata) + '\n'));
+
+            // Send the root node
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  type: 'node',
+                  data: {
+                    ...root,
+                    parentPath: '',
+                    hasChildren: true,
+                  },
+                }) + '\n'
+              )
+            );
+
+            // Send the file node
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  type: 'node',
+                  data: {
+                    ...root.children[0],
+                    parentPath: '',
+                    hasChildren: false,
+                  },
+                }) + '\n'
+              )
+            );
+
+            // Send completion
+            controller.enqueue(encoder.encode(JSON.stringify({ type: 'complete' }) + '\n'));
+            controller.close();
+          },
+        });
+
+        const remaining = await universalRateLimiter.getRemainingRequests(
+          clientIp,
+          rateLimiterContext
+        );
+        const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'application/x-ndjson',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': String(remaining),
+            'X-RateLimit-Reset': String(Math.floor(resetTime / 1000)),
+          },
+        });
+      }
+
       // fetchFromWeb returns a FetchResult with files array and metadata
-      if (!result || !result.files) {
+      if (!result || !('files' in result)) {
+        console.error('Invalid result structure:', result);
         return Response.json({ error: 'Invalid response from codefetch' }, { status: 500 });
       }
 
       // Convert files array to tree structure for backward compatibility
       const root = {
-        name: result.metadata?.sourceUrl || 'root',
+        name: result.metadata?.source || 'root',
         path: '',
         type: 'directory' as const,
         children: result.files.map((file) => ({
@@ -120,8 +249,8 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
               data: {
                 url: targetUrl,
                 scrapedAt: new Date().toISOString(),
-                title: result.metadata?.gitRepo || 'Scraped Content',
-                description: `Source: ${result.metadata?.sourceUrl || targetUrl}`,
+                title: result.metadata?.source || 'Scraped Content',
+                description: `Source: ${result.metadata?.source || targetUrl}`,
                 totalFiles: result.metadata?.totalFiles,
                 totalSize: result.metadata?.totalSize,
                 totalTokens: result.metadata?.totalTokens,
@@ -177,7 +306,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       );
       const resetTime = await universalRateLimiter.getResetTime(clientIp, rateLimiterContext);
 
-      return new Response(stream, {
+      const response = new Response(stream, {
         headers: {
           'Content-Type': 'application/x-ndjson',
           'Cache-Control': 'no-cache',
@@ -187,6 +316,17 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
           'X-RateLimit-Reset': String(Math.floor(resetTime / 1000)),
         },
       });
+
+      // Cache the response if we're in a Cloudflare Workers environment
+      if (isWorkerEnvironment) {
+        const cache = (caches as any).default;
+        const cacheUrl = `https://codefetch.ui/cache/${encodeURIComponent(targetUrl)}`;
+        const cacheRequest = new Request(cacheUrl);
+        // We need to clone the response to be able to cache it
+        await cache.put(cacheRequest, response.clone());
+      }
+
+      return response;
     } catch (error) {
       console.error('Error in scrape API:', error);
       return Response.json({ error: 'Failed to scrape URL' }, { status: 500 });
