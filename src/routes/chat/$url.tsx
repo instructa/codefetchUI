@@ -31,6 +31,7 @@ import { useScrapedDataStore } from '~/lib/stores/scraped-data.store';
 import { useCodefetchFilters } from '~/lib/stores/codefetch-filters.store';
 import { usePreviewStore } from '~/lib/stores/preview.store';
 import { useCodeSearch } from '~/hooks/use-code-search';
+import { usePreviewGenerator } from '~/hooks/use-preview-generator';
 import type { SearchMetadata } from '~/hooks/use-code-search';
 import { useStreamingScrape } from '~/hooks/use-streaming-scrape';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
@@ -234,6 +235,9 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
   const { selectedPrompt, setSelectedPrompt } = useCodefetchFilters();
 
   const { previewMarkdown, tokenCount, isGenerating } = usePreviewStore();
+
+  // Initialize preview generator to connect stores and worker
+  usePreviewGenerator();
 
   // Reset mobile states when switching between mobile and desktop
   useEffect(() => {
