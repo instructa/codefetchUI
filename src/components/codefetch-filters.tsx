@@ -163,13 +163,13 @@ export function CodefetchFilters() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border-subtle">
+      <div className="px-3 py-2 border-b border-border-subtle">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-primary" />
-            <h2 className="text-title">Codefetch Filters</h2>
+            <Settings2 className="h-3.5 w-3.5 text-primary" />
+            <h2 className="text-sm font-medium">Codefetch Filters</h2>
             {hasModified && (
-              <Badge variant="secondary" className="text-caption badge-subtle rounded-md">
+              <Badge variant="secondary" className="text-xs badge-subtle rounded-md">
                 Modified
               </Badge>
             )}
@@ -180,18 +180,18 @@ export function CodefetchFilters() {
               size="icon"
               onClick={exportConfig}
               title="Export configuration"
-              className="h-8 w-8 button-ghost rounded-md transition-smooth"
+              className="h-7 w-7 button-ghost rounded-md transition-smooth"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-3 w-3" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={importConfig}
               title="Import configuration"
-              className="h-8 w-8 button-ghost rounded-md transition-smooth"
+              className="h-7 w-7 button-ghost rounded-md transition-smooth"
             >
-              <Upload className="h-3.5 w-3.5" />
+              <Upload className="h-3 w-3" />
             </Button>
             <Button
               variant="ghost"
@@ -200,28 +200,30 @@ export function CodefetchFilters() {
                 filters.resetFilters();
                 toast.info('Filters reset to defaults');
               }}
-              className="gap-1.5 h-8 px-3 button-ghost rounded-md text-body-sm transition-smooth"
+              className="gap-1.5 h-7 px-2.5 button-ghost rounded-md text-xs transition-smooth"
               disabled={!hasModified}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-3 w-3" />
               Reset
             </Button>
           </div>
         </div>
-        <p className="text-caption mt-0.5">Configure filters for file collection and output</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Configure filters for file collection and output
+        </p>
       </div>
 
       {/* Scrollable Content */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-4">
+        <div className="p-2.5 space-y-3">
           {/* File Extensions */}
           <Card className="card-enhanced">
-            <CardHeader className="px-3 py-2.5 border-b border-border-subtle">
-              <CardTitle className="flex items-center gap-2 text-title">
-                <FileCode className="h-4 w-4" />
+            <CardHeader className="px-3 py-2 border-b border-border-subtle">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <FileCode className="h-3.5 w-3.5" />
                 File Extensions
               </CardTitle>
-              <CardDescription className="text-body-sm mt-0.5">
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
                 {dynamicExtensions.length > 0
                   ? `Found ${dynamicExtensions.length} file types in the project`
                   : scrapedData
@@ -229,7 +231,7 @@ export function CodefetchFilters() {
                     : 'Select which file types to include'}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-2.5">
               {!scrapedData && dynamicExtensions.length === 0 && (
                 <div className="text-xs text-muted-foreground text-center py-2">
                   <p>Scrape a project to see file types specific to that codebase</p>
@@ -285,7 +287,7 @@ export function CodefetchFilters() {
                 </Button>
               )}
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-2.5 space-y-2">
                 <Label htmlFor="custom-extensions" className="text-xs">
                   Custom Extensions
                 </Label>
@@ -294,7 +296,7 @@ export function CodefetchFilters() {
                   placeholder="e.g., .vue, .svelte, .astro (comma-separated)"
                   value={filters.customExtensions}
                   onChange={(e) => filters.setCustomExtensions(e.target.value)}
-                  className="font-mono text-xs input-enhanced h-8"
+                  className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
                 />
                 <p className="text-xs text-muted-foreground">
                   Add custom file extensions separated by commas
@@ -305,16 +307,16 @@ export function CodefetchFilters() {
 
           {/* File & Directory Patterns */}
           <Card className="card-enhanced">
-            <CardHeader className="px-3 py-2.5 border-b border-border-subtle">
-              <CardTitle className="flex items-center gap-2 text-title">
-                <Filter className="h-4 w-4" />
+            <CardHeader className="px-3 py-2 border-b border-border-subtle">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Filter className="h-3.5 w-3.5" />
                 Pattern Filters
               </CardTitle>
-              <CardDescription className="text-body-sm mt-0.5">
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
                 Include or exclude specific files and directories
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-2.5">
               <Tabs defaultValue="files" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 h-10 rounded-md shadow-sm">
                   <TabsTrigger
@@ -333,7 +335,7 @@ export function CodefetchFilters() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="files" className="space-y-3 mt-3">
+                <TabsContent value="files" className="space-y-2.5 mt-2.5">
                   {/* Include Files */}
                   <div className="space-y-2">
                     <Label className="text-xs">Include Files</Label>
@@ -351,7 +353,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
                       />
                       <Button
                         size="icon"
@@ -403,7 +405,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
                       />
                       <Button
                         size="icon"
@@ -439,7 +441,7 @@ export function CodefetchFilters() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="directories" className="space-y-3 mt-3">
+                <TabsContent value="directories" className="space-y-2.5 mt-2.5">
                   {/* Include Directories */}
                   <div className="space-y-2">
                     <Label className="text-xs">Include Directories</Label>
@@ -457,7 +459,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
                       />
                       <Button
                         size="icon"
@@ -505,7 +507,7 @@ export function CodefetchFilters() {
                             );
                           }
                         }}
-                        className="font-mono text-xs input-enhanced h-8"
+                        className="font-mono text-xs input-enhanced h-8 placeholder:text-muted-foreground/40"
                       />
                       <Button
                         size="icon"
@@ -542,14 +544,14 @@ export function CodefetchFilters() {
 
           {/* Display Options */}
           <Card className="card-enhanced">
-            <CardHeader className="px-3 py-2.5 border-b border-border-subtle">
+            <CardHeader className="px-3 py-2 border-b border-border-subtle">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-title">
-                    <Eye className="h-4 w-4" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Eye className="h-3.5 w-3.5" />
                     Display Options
                   </CardTitle>
-                  <CardDescription className="text-body-sm mt-0.5">
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
                     Configure how the output is displayed
                   </CardDescription>
                 </div>
@@ -558,9 +560,9 @@ export function CodefetchFilters() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 button-ghost rounded-md transition-smooth"
+                      className="h-7 w-7 button-ghost rounded-md transition-smooth"
                     >
-                      <Settings className="h-3.5 w-3.5" />
+                      <Settings className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -604,7 +606,7 @@ export function CodefetchFilters() {
                               const value = e.target.value;
                               filters.setMaxTokens(value ? parseInt(value) : null);
                             }}
-                            className="flex-1 h-8 text-xs rounded-md"
+                            className="flex-1 h-8 text-xs rounded-md placeholder:text-muted-foreground/40"
                           />
                           <span className="text-xs text-muted-foreground">tokens</span>
                         </div>
@@ -705,31 +707,31 @@ export function CodefetchFilters() {
                 </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent className="p-3 space-y-4">
+            <CardContent className="p-2.5 space-y-3">
               {/* Project Tree Depth */}
               <div className="space-y-2">
                 <Label className="text-xs">Project Tree Depth</Label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-8 w-8 rounded-md shadow-xs hover:shadow-sm transition-smooth"
+                    className="h-7 w-7 rounded-md shadow-xs hover:shadow-sm transition-smooth"
                     onClick={() => filters.setProjectTreeDepth(filters.projectTreeDepth - 1)}
                     disabled={filters.projectTreeDepth === 0}
                   >
-                    <Minus className="h-3.5 w-3.5" />
+                    <Minus className="h-3 w-3" />
                   </Button>
-                  <div className="w-12 text-center">
-                    <span className="text-base font-medium">{filters.projectTreeDepth}</span>
+                  <div className="w-10 text-center">
+                    <span className="text-sm font-medium">{filters.projectTreeDepth}</span>
                   </div>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-8 w-8 rounded-md shadow-xs hover:shadow-sm transition-smooth"
+                    className="h-7 w-7 rounded-md shadow-xs hover:shadow-sm transition-smooth"
                     onClick={() => filters.setProjectTreeDepth(filters.projectTreeDepth + 1)}
                     disabled={filters.projectTreeDepth === 10}
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <Plus className="h-3 w-3" />
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -741,7 +743,7 @@ export function CodefetchFilters() {
               <div className="space-y-2">
                 <Label className="text-xs">AI Prompt Template</Label>
                 <Select value={filters.selectedPrompt} onValueChange={filters.setSelectedPrompt}>
-                  <SelectTrigger className="h-8 text-xs rounded-md input-enhanced">
+                  <SelectTrigger className="h-8 text-xs rounded-md input-enhanced placeholder:text-muted-foreground/40">
                     <SelectValue placeholder="Select a prompt template" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md shadow-lg">
