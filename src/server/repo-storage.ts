@@ -1,6 +1,5 @@
 import { createStorage } from 'unstorage';
 import memoryDriver from 'unstorage/drivers/memory';
-import crypto from 'crypto';
 
 // Create storage instance with memory driver
 const storage = createStorage({
@@ -36,9 +35,17 @@ function normalizeGitHubUrl(url: string): string {
 /**
  * Generate a storage key from a repository URL
  */
-export function generateRepoKey(url: string): string {
+export async function generateRepoKey(url: string): Promise<string> {
   const normalized = normalizeGitHubUrl(url);
-  const hash = crypto.createHash('sha256').update(normalized).digest('hex').substring(0, 16);
+
+  // Use Web Crypto API for Cloudflare Workers compatibility
+  const encoder = new TextEncoder();
+  const data = encoder.encode(normalized);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const hash = hashHex.substring(0, 16);
+
   return `repo:${hash}:v1`;
 }
 
@@ -46,7 +53,7 @@ export function generateRepoKey(url: string): string {
  * Store repository data
  */
 export async function storeRepoData(url: string, data: any): Promise<void> {
-  const key = generateRepoKey(url);
+  const key = await generateRepoKey(url);
 
   // Store with 2 hour TTL
   await storage.setItem(
@@ -66,7 +73,7 @@ export async function storeRepoData(url: string, data: any): Promise<void> {
  * Retrieve repository data
  */
 export async function getRepoData(url: string): Promise<any | null> {
-  const key = generateRepoKey(url);
+  const key = await generateRepoKey(url);
 
   const stored = await storage.getItem(key);
 
@@ -81,7 +88,7 @@ export async function getRepoData(url: string): Promise<any | null> {
  * Check if repository data exists
  */
 export async function hasRepoData(url: string): Promise<boolean> {
-  const key = generateRepoKey(url);
+  const key = await generateRepoKey(url);
   return await storage.hasItem(key);
 }
 
@@ -89,7 +96,7 @@ export async function hasRepoData(url: string): Promise<boolean> {
  * Remove repository data
  */
 export async function removeRepoData(url: string): Promise<void> {
-  const key = generateRepoKey(url);
+  const key = await generateRepoKey(url);
   await storage.removeItem(key);
 }
 

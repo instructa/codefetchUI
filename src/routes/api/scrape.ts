@@ -161,8 +161,8 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         }
       }
 
-      // Get GitHub token from environment if available
-      const githubToken = import.meta.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+      // Get GitHub token from Cloudflare context or environment
+      const githubToken = (context as any)?.GITHUB_TOKEN || import.meta.env.GITHUB_TOKEN;
 
       // Check if streaming is requested and URL is a GitHub repository
       const isGitHubUrl = targetUrl.includes('github.com');
@@ -249,11 +249,25 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       }
 
       // Non-streaming: use regular fetchFromWeb with JSON format to get file structure
-      const result = await fetchFromWeb(targetUrl, {
-        ...(githubToken && { token: githubToken }),
-        maxTokens: 100000, // Set a reasonable token limit
-        format: 'json', // Get structured result with file tree, not markdown
+      console.log('[Scrape API] Calling fetchFromWeb with:', {
+        url: targetUrl,
+        hasToken: !!githubToken,
+        format: 'json',
       });
+
+      let result;
+      try {
+        result = await fetchFromWeb(targetUrl, {
+          ...(githubToken && { token: githubToken }),
+          maxTokens: 100000, // Set a reasonable token limit
+          format: 'json', // Get structured result with file tree, not markdown
+        });
+      } catch (fetchError) {
+        console.error('[Scrape API] fetchFromWeb failed:', fetchError);
+        throw new Error(
+          `Failed to fetch from URL: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`
+        );
+      }
 
       // Handle different response types from fetchFromWeb
       let root: FileNode;
@@ -505,7 +519,20 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       return response;
     } catch (error) {
       console.error('Error in scrape API:', error);
-      return Response.json({ error: 'Failed to scrape URL' }, { status: 500 });
+
+      // Provide more detailed error information in non-production environments
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorDetails = {
+        error: 'Failed to scrape URL',
+        message: errorMessage,
+        // Include stack trace in development
+        ...((context as any)?.NODE_ENV !== 'production' &&
+          error instanceof Error && {
+            stack: error.stack,
+          }),
+      };
+
+      return Response.json(errorDetails, { status: 500 });
     }
   },
 });
