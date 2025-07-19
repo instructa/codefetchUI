@@ -1,10 +1,7 @@
 import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import { schema } from './schema';
 import type { D1Database } from '@cloudflare/workers-types';
-import type { worker } from '../../alchemy.run';
-
-// Infer the types from alchemy.run.ts
-type CloudflareEnv = typeof worker.Env;
+import type { CloudflareEnv } from '../../types/env';
 
 type DatabaseName = keyof Pick<CloudflareEnv, 'AUTH_DB' | 'ANALYTICS' | 'DATABASE'>;
 

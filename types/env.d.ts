@@ -23,3 +23,7 @@ declare module '@tanstack/react-start/server' {
     cf?: IncomingRequestCfProperties;
   }
 }
+
+declare module 'cloudflare:workers' {
+  export const env: CloudflareEnv;
+}

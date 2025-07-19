@@ -1,10 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getWebRequest } from '@tanstack/react-start/server';
 import { createAuth } from '../auth.server';
-import type { worker } from '../../../alchemy.run';
-
-// Infer the types from alchemy.run.ts
-type Env = typeof worker.Env;
+import { env } from 'cloudflare:workers';
 
 /**
  * Server function to get the current session.
@@ -14,8 +11,7 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async ({ con
   try {
     const { headers } = getWebRequest();
 
-    // Cast context to Env type
-    const env = context as Env;
+    // Use the imported env directly
     const authInstance = createAuth(env);
 
     const session = await authInstance.api.getSession({
@@ -48,8 +44,7 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async ({ con
 export const signOut = createServerFn({ method: 'POST' }).handler(async ({ context }) => {
   const { headers } = getWebRequest();
 
-  // Cast context to Env type
-  const env = context as Env;
+  // Use the imported env directly
   const authInstance = createAuth(env);
 
   await authInstance.api.signOut({

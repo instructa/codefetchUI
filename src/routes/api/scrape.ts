@@ -1,4 +1,5 @@
 import { createServerFileRoute } from '@tanstack/react-start/server';
+import { env } from 'cloudflare:workers';
 import {
   fetchFromWeb,
   streamGitHubFiles,
@@ -9,13 +10,9 @@ import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limite
 import { getApiSecurityConfig } from '~/lib/api-security';
 import { storeRepoData } from '~/server/repo-storage';
 import type { FileNode as RepoFileNode } from '~/lib/stores/scraped-data.store';
-import type { worker } from '../../../alchemy.run';
 
 // Type alias for consistency
 type FileNode = RepoFileNode;
-
-// Infer the types from alchemy.run.ts
-type Env = typeof worker.Env;
 
 interface ScrapeMetadata {
   url: string;
@@ -28,7 +25,7 @@ interface ScrapeMetadata {
   description?: string;
 }
 
-export const ServerRoute = createServerFileRoute('/api/scrape').methods({
+export const ServerRoute = createServerFileRoute('/api/scrape' as any).methods({
   /**
    * GET /api/scrape - Scrape and process content from URLs
    *
@@ -69,9 +66,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request, context }) => {
     const securityConfig = getApiSecurityConfig();
 
-    // Cast context to Env type
-    const env = context as Env;
-
+    // Use the imported env directly
     // Get rate limiter context (KV namespace in production)
     const rateLimiterContext: RateLimiterContext = {
       RATE_LIMIT_KV: env?.CACHE,
