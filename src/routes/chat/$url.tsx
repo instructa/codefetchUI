@@ -516,12 +516,12 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                   <Filter className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] flex flex-col h-full">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                   <SheetDescription>Configure file filters for the codebase</SheetDescription>
                 </SheetHeader>
-                <div className="mt-4">
+                <div className="mt-4 flex-1 overflow-hidden">
                   <CodefetchFilters />
                 </div>
               </SheetContent>
@@ -847,7 +847,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                     </div>
                   )}
                   {activeLeftTab === 'filters' && (
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden h-full">
                       <CodefetchFilters />
                     </div>
                   )}
