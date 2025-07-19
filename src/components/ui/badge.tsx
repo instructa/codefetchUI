@@ -34,7 +34,12 @@ function Badge({
   const Comp = asChild ? Slot : 'span';
 
   return (
-    <Comp data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props} />
+    <Comp
+      className={cn(badgeVariants({ variant }), className)}
+      {...props}
+      // Suppress hydration warning for SSR compatibility
+      suppressHydrationWarning
+    />
   );
 }
 

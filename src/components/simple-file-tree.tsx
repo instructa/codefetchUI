@@ -492,10 +492,14 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
   );
 
   const prevFiltersKey = useRef(filtersKey);
-  if (prevFiltersKey.current !== filtersKey) {
-    setManualSelections({ checked: new Set(), unchecked: new Set() });
-    prevFiltersKey.current = filtersKey;
-  }
+
+  // Reset manual selections when filters change
+  useEffect(() => {
+    if (prevFiltersKey.current !== filtersKey) {
+      setManualSelections({ checked: new Set(), unchecked: new Set() });
+      prevFiltersKey.current = filtersKey;
+    }
+  }, [filtersKey, setManualSelections]);
 
   // Calculate initial matches for root level
   const rootChildMatches = useMemo(() => {
@@ -691,8 +695,8 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
   if (!data) return null;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-col gap-2 p-2 border-b">
+    <div className="flex flex-col h-full max-h-[100vh]">
+      <div className="flex flex-col gap-2 p-2 border-b flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">File Explorer</span>
@@ -735,7 +739,7 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
       </div>
 
       {isSearching && (
-        <div className="p-2 border-b">
+        <div className="p-2 border-b flex-shrink-0">
           <div className="relative">
             <Input
               type="text"
@@ -758,7 +762,7 @@ export function SimpleFileTree({ data, onFileSelect, selectedPath }: SimpleFileT
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {filteredNodes ? (
           <SimpleFileTreeNode
             node={filteredNodes}

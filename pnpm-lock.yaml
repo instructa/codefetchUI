@@ -132,8 +132,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       codefetch-sdk:
-        specifier: https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@12
-        version: https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@12(magicast@0.3.5)
+        specifier: https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@13
+        version: https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@13(magicast@0.3.5)
       drizzle-kit:
         specifier: ^0.31.4
         version: 0.31.4
@@ -5534,8 +5534,8 @@ packages:
   code-block-writer@12.0.0:
     resolution: {integrity: sha512-q4dMFMlXtKR3XNBHyMHt/3pwYNA69EDk00lloMOaaUMKPUXBw6lpXtbu3MMVG6/uOihGnRDOlkyqsONEUj60+w==}
 
-  codefetch-sdk@https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@12:
-    resolution: {tarball: https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@12}
+  codefetch-sdk@https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@13:
+    resolution: {tarball: https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@13}
     version: 1.6.3
 
   color-convert@1.9.3:
@@ -16454,7 +16454,7 @@ snapshots:
 
   code-block-writer@12.0.0: {}
 
-  codefetch-sdk@https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@12(magicast@0.3.5):
+  codefetch-sdk@https://pkg.pr.new/regenrek/codefetch/codefetch-sdk@13(magicast@0.3.5):
     dependencies:
       c12: 2.0.4(magicast@0.3.5)
       consola: 3.4.2

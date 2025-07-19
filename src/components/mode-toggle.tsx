@@ -1,27 +1,26 @@
-import { useEffect, useState } from "react"
-import { useTheme } from "./theme-provider"
+import { lazy, Suspense } from 'react';
+
+// Dynamically import the client component only on the client side
+const ModeToggleClient = lazy(() =>
+  import('./mode-toggle.client').then((mod) => ({
+    default: mod.ModeToggleClient,
+  }))
+);
+
+// SSR-friendly placeholder that matches the button dimensions
+function ModeTogglePlaceholder() {
+  return (
+    <div
+      className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background"
+      aria-hidden="true"
+    />
+  );
+}
 
 export function ModeToggle() {
-    const { theme, setTheme } = useTheme()
-    const [mounted, setMounted] = useState(false)
-    const next = theme === "light" ? "dark" : "light"
-
-    useEffect(() => {
-        setMounted(true)
-    }, [])
-
-    // During SSR and initial client render, show a placeholder to avoid hydration mismatch
-    if (!mounted) {
-        return (
-            <button type="button" disabled>
-                <span className="opacity-0">🌙</span>
-            </button>
-        )
-    }
-
-    return (
-        <button type="button" onClick={() => setTheme(next)}>
-            {theme === "light" ? "☀️" : "🌙"}
-        </button>
-    )
+  return (
+    <Suspense fallback={<ModeTogglePlaceholder />}>
+      <ModeToggleClient />
+    </Suspense>
+  );
 }

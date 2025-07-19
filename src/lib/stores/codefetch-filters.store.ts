@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { TokenEncoder } from 'codefetch-sdk/worker';
 
 export type TokenLimiter = 'truncated' | 'spread';
@@ -158,68 +158,56 @@ const defaultFilters = {
   extensions: ['.ts', '.tsx', '.js', '.jsx'],
   customExtensions: '',
   maxTokens: 100000,
-  tokenEncoder: 'simple' as TokenEncoder, // Changed from 'cl100k' to 'simple' to avoid loading large vocabulary files
+  tokenEncoder: 'simple' as TokenEncoder,
   tokenLimiter: 'truncated' as TokenLimiter,
-  includeFiles: [],
-  excludeFiles: [],
-  includeDirs: [],
-  excludeDirs: [],
+  includeFiles: [] as string[],
+  excludeFiles: [] as string[],
+  includeDirs: [] as string[],
+  excludeDirs: [] as string[],
   projectTreeDepth: 2,
   disableLineNumbers: false,
   selectedPrompt: 'none',
 };
 
+// No-op storage for SSR
+const noopStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
+
+// Check if we're on the server
+const isServer = typeof window === 'undefined';
+
 export const useCodefetchFilters = create<CodefetchFilters>()(
   persist(
     (set, get) => ({
+      // Initial state
       ...defaultFilters,
 
+      // Actions
       setExtensions: (extensions) => set({ extensions }),
       setCustomExtensions: (value) => set({ customExtensions: value }),
       setMaxTokens: (tokens) => set({ maxTokens: tokens }),
       setTokenEncoder: (encoder) => set({ tokenEncoder: encoder }),
       setTokenLimiter: (limiter) => set({ tokenLimiter: limiter }),
-
       addIncludeFile: (pattern) =>
-        set((state) => ({
-          includeFiles: [...state.includeFiles, pattern],
-        })),
+        set((state) => ({ includeFiles: [...state.includeFiles, pattern] })),
       removeIncludeFile: (pattern) =>
-        set((state) => ({
-          includeFiles: state.includeFiles.filter((p) => p !== pattern),
-        })),
-
+        set((state) => ({ includeFiles: state.includeFiles.filter((p) => p !== pattern) })),
       addExcludeFile: (pattern) =>
-        set((state) => ({
-          excludeFiles: [...state.excludeFiles, pattern],
-        })),
+        set((state) => ({ excludeFiles: [...state.excludeFiles, pattern] })),
       removeExcludeFile: (pattern) =>
-        set((state) => ({
-          excludeFiles: state.excludeFiles.filter((p) => p !== pattern),
-        })),
-
+        set((state) => ({ excludeFiles: state.excludeFiles.filter((p) => p !== pattern) })),
       addIncludeDir: (pattern) =>
-        set((state) => ({
-          includeDirs: [...state.includeDirs, pattern],
-        })),
+        set((state) => ({ includeDirs: [...state.includeDirs, pattern] })),
       removeIncludeDir: (pattern) =>
-        set((state) => ({
-          includeDirs: state.includeDirs.filter((p) => p !== pattern),
-        })),
-
+        set((state) => ({ includeDirs: state.includeDirs.filter((p) => p !== pattern) })),
       addExcludeDir: (pattern) =>
-        set((state) => ({
-          excludeDirs: [...state.excludeDirs, pattern],
-        })),
+        set((state) => ({ excludeDirs: [...state.excludeDirs, pattern] })),
       removeExcludeDir: (pattern) =>
-        set((state) => ({
-          excludeDirs: state.excludeDirs.filter((p) => p !== pattern),
-        })),
-
-      setProjectTreeDepth: (depth) =>
-        set({
-          projectTreeDepth: Math.max(0, Math.min(10, depth)),
-        }),
+        set((state) => ({ excludeDirs: state.excludeDirs.filter((p) => p !== pattern) })),
+      setProjectTreeDepth: (depth) => set({ projectTreeDepth: Math.max(0, Math.min(10, depth)) }),
       setDisableLineNumbers: (disable) => set({ disableLineNumbers: disable }),
       setSelectedPrompt: (prompt) => set({ selectedPrompt: prompt }),
 
@@ -254,6 +242,8 @@ export const useCodefetchFilters = create<CodefetchFilters>()(
     }),
     {
       name: 'codefetch-filters-storage',
+      skipHydration: true, // Prevent hydration during SSR
+      storage: isServer ? createJSONStorage(() => noopStorage) : undefined, // Use no-op storage on server
     }
   )
 );
