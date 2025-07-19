@@ -1,7 +1,10 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getWebRequest } from '@tanstack/react-start/server';
 import { createAuth } from '../auth.server';
-import type { CloudflareEnv } from '../../../types/env';
+import type { worker } from '../../../alchemy.run';
+
+// Infer the types from alchemy.run.ts
+type Env = typeof worker.Env;
 
 /**
  * Server function to get the current session.
@@ -11,8 +14,8 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async ({ con
   try {
     const { headers } = getWebRequest();
 
-    // Get env from context when running on Cloudflare
-    const env = (context || {}) as CloudflareEnv;
+    // Cast context to Env type
+    const env = context as Env;
     const authInstance = createAuth(env);
 
     const session = await authInstance.api.getSession({
@@ -39,23 +42,19 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async ({ con
 });
 
 /**
- * Server function to sign out the user
+ * Server function to sign out.
+ * Clears the session and cookies.
  */
 export const signOut = createServerFn({ method: 'POST' }).handler(async ({ context }) => {
-  try {
-    const { headers } = getWebRequest();
+  const { headers } = getWebRequest();
 
-    // Get env from context when running on Cloudflare
-    const env = (context || {}) as CloudflareEnv;
-    const authInstance = createAuth(env);
+  // Cast context to Env type
+  const env = context as Env;
+  const authInstance = createAuth(env);
 
-    await authInstance.api.signOut({
-      headers,
-    });
+  await authInstance.api.signOut({
+    headers,
+  });
 
-    return { success: true };
-  } catch (error) {
-    console.error('Sign out failed:', error);
-    return { success: false };
-  }
+  return { success: true };
 });

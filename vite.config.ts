@@ -22,14 +22,6 @@ export default defineConfig({
   plugins: [
     tailwindcss() as PluginOption,
     cloudflareWorkersDevEnvironmentShim(),
-    // Add Cloudflare plugin for D1 bindings support
-    cloudflare({
-      persistState: process.env.ALCHEMY_CLOUDFLARE_PERSIST_PATH
-        ? {
-            path: process.env.ALCHEMY_CLOUDFLARE_PERSIST_PATH,
-          }
-        : undefined,
-    }),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),

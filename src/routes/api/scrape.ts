@@ -9,9 +9,13 @@ import { universalRateLimiter, type RateLimiterContext } from '~/lib/rate-limite
 import { getApiSecurityConfig } from '~/lib/api-security';
 import { storeRepoData } from '~/server/repo-storage';
 import type { FileNode as RepoFileNode } from '~/lib/stores/scraped-data.store';
+import type { worker } from '../../../alchemy.run';
 
 // Type alias for consistency
 type FileNode = RepoFileNode;
+
+// Infer the types from alchemy.run.ts
+type Env = typeof worker.Env;
 
 interface ScrapeMetadata {
   url: string;
@@ -65,9 +69,12 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
   GET: async ({ request, context }) => {
     const securityConfig = getApiSecurityConfig();
 
+    // Cast context to Env type
+    const env = context as Env;
+
     // Get rate limiter context (KV namespace in production)
     const rateLimiterContext: RateLimiterContext = {
-      RATE_LIMIT_KV: (context as any)?.CACHE,
+      RATE_LIMIT_KV: env?.CACHE,
     };
 
     // Security check 1: Validate Origin/Referer
@@ -166,7 +173,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
       }
 
       // Get GitHub token from Cloudflare context or environment
-      const githubToken = (context as any)?.GITHUB_TOKEN || import.meta.env.GITHUB_TOKEN;
+      const githubToken = env?.GITHUB_TOKEN || import.meta.env.GITHUB_TOKEN;
 
       // Check if streaming is requested and URL is a GitHub repository
       const isGitHubUrl = targetUrl.includes('github.com');
@@ -476,7 +483,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         },
       });
 
-      const embedQueue = (context as any)?.EMBED_QUEUE;
+      const embedQueue = env?.EMBED_QUEUE;
       if (embedQueue && root.type === 'directory' && root.children && root.children.length > 0) {
         // Send job to embed queue only if we have a valid tree structure with files
         try {
@@ -535,7 +542,7 @@ export const ServerRoute = createServerFileRoute('/api/scrape').methods({
         error: 'Failed to scrape URL',
         message: errorMessage,
         // Include stack trace in development
-        ...((context as any)?.NODE_ENV !== 'production' &&
+        ...(env?.NODE_ENV !== 'production' &&
           error instanceof Error && {
             stack: error.stack,
           }),

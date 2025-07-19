@@ -6,7 +6,10 @@ import { reactStartCookies } from 'better-auth/react-start';
 import { magicLink } from 'better-auth/plugins';
 import { getAuthDb } from '~/db/db-config';
 import { sendEmail } from './email';
-import type { CloudflareEnv } from '../../types/env';
+import type { worker } from '../../alchemy.run';
+
+// Infer the types from alchemy.run.ts
+type CloudflareEnv = typeof worker.Env;
 
 /**
  * Creates an auth instance configured for the current environment.

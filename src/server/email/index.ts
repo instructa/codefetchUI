@@ -1,4 +1,7 @@
-import type { CloudflareEnv } from '../../../types/env';
+import type { worker } from '../../../alchemy.run';
+
+// Infer the types from alchemy.run.ts
+type CloudflareEnv = typeof worker.Env;
 import {
   ConsoleProvider,
   type EmailProvider,
