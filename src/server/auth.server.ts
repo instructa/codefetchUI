@@ -2,6 +2,7 @@ import type { IncomingRequestCfProperties } from '@cloudflare/workers-types';
 import type { KVNamespace } from '@cloudflare/workers-types';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { anonymous, passkey } from 'better-auth/plugins';
 import { reactStartCookies } from 'better-auth/react-start';
 import { magicLink } from 'better-auth/plugins';
 import { getAuthDb } from '~/db/db-config';
@@ -9,29 +10,70 @@ import { sendEmail } from './email';
 import type { CloudflareEnv } from '../../types/env';
 
 /**
- * Main authentication configuration for Cloudflare Workers.
- * This combines BetterAuth with Cloudflare-specific integrations.
+ * Creates an auth instance configured for the current environment.
+ * @param env - The Cloudflare environment bindings (required)
+ * @param cf - Optional Cloudflare request properties for geo-based features
  */
-function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
-  // Get the Drizzle database instance
-  const db = env ? getAuthDb(env) : ({} as any);
+function createAuth(env: CloudflareEnv, cf?: IncomingRequestCfProperties) {
+  // Check if we're in development mode without proper bindings
+  // In Alchemy dev mode, bindings might not be available through TanStack Start context
+  const hasD1Bindings = !!(env?.AUTH_DB && typeof env.AUTH_DB === 'object');
+  const isDevelopment = !hasD1Bindings;
 
+  // In development, we'll use in-memory storage as a fallback
+  if (isDevelopment) {
+    console.warn('[Auth] Running without D1 bindings. Using in-memory SQLite for development.');
+
+    // Return a minimal auth config for development
+    return betterAuth({
+      database: {
+        provider: 'sqlite',
+        url: ':memory:', // In-memory SQLite for development
+      },
+      emailAndPassword: {
+        enabled: true,
+        requireEmailVerification: false,
+        sendResetPassword: async ({ user, url }) => {
+          console.log('[Dev Email] Password reset:', { to: user.email, url });
+        },
+      },
+      emailVerification: {
+        sendOnSignUp: false,
+        autoSignInAfterVerification: false,
+      },
+      plugins: [
+        reactStartCookies(),
+        magicLink({
+          async sendMagicLink({ email, url }) {
+            console.log('[Dev Email] Magic link:', { email, url });
+          },
+        }),
+        anonymous(),
+        passkey(),
+      ],
+      // Disable rate limiting in development
+      rateLimit: {
+        enabled: false,
+      },
+    });
+  }
+
+  // Production configuration with real D1 database
+  const db = getAuthDb(env);
   const isProd = env?.NODE_ENV === 'production';
   const isEmailVerificationEnabled = env?.ENABLE_EMAIL_VERIFICATION === 'true';
 
   // Helper for sending emails
   const sendEmailWithEnv = async (options: Parameters<typeof sendEmail>[0]) => {
-    await sendEmail(options);
+    await sendEmail({ ...options, env });
   };
 
   // Create the BetterAuth configuration with Cloudflare support
   const authConfig = betterAuth({
     // Database configuration using Drizzle adapter
-    ...(env && {
-      database: drizzleAdapter(db, {
-        provider: 'sqlite', // D1 is SQLite-based
-        usePlural: true,
-      }),
+    database: drizzleAdapter(db, {
+      provider: 'sqlite', // D1 is SQLite-based
+      usePlural: true,
     }),
 
     // Email and password authentication
@@ -119,6 +161,8 @@ function createAuth(env?: CloudflareEnv, cf?: IncomingRequestCfProperties) {
           });
         },
       }),
+      anonymous(),
+      passkey(),
     ],
 
     // Rate limiting

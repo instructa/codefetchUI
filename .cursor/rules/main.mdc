@@ -1,10 +1,62 @@
 ---
-description: 
-globs: 
 alwaysApply: true
 ---
 
 ### Project setup
+
+* latest stable: TanStack Start 1.128.6, React 19, Zustand 5, TanStack Query 6
+* pnpm only
+* `npx shadcn@latest` (never shadcn-ui)
+* alias `~` → `./src`
+* no default exports in route files (`.tsx`)
+* env vars via `import.meta.env` in code that may hit browser; `process.env` only server-side
+* update `.env.example`, not `.env`
+* omit explicit `createFileRoute` import (auto)
+* Vite + Nitro SSR runtime
+
+### File structure
+
+* routes in `src/routes`, folder-based, loader+action colocated
+* stateless, fetch-free UI in `src/components`
+* shared hooks in `src/hooks`, global stores in `src/stores`, shared types in `src/types`
+
+### Code style
+
+* prefer `const` & readonly
+* async arrow loaders returning typed objects
+* named exports everywhere; destructure props/hooks early
+* derive data via TanStack Query/Zustand selectors
+* `useTransition`/`useDeferValue` for non-blocking UI; prefer router `defer()` for data
+* route-level code-split is automatic; use `React.lazy` only if special chunking needed
+
+### Which tool when
+
+* data required before render: route `loader`
+* shared server data needing cache/retry: TanStack Query (prefetch/ensure in loader → `useSuspenseQuery`)
+* server-only logic (DB, secrets): `createServerFn`
+* simple public REST: `fetch` inside loader
+* non-critical data: `defer()` or Query prefetch w/o await
+* client-only or ephemeral UI state: Zustand store
+* URL-shareable state (filters, page): router search/params `useSearch`
+
+### Effect hygiene
+
+* no `useEffect` for fetching or route sync; use only for browser APIs, websockets, DOM tweaks
+* minimal `useState`: global in Zustand, URL in router, local transient in component
+* heavy pure computations: prefer Query/Zustand selectors; use `useMemo` only when unavoidable
+
+### SSR safety
+
+* new router instance per request
+* new Zustand store per request (provider factory)
+* new `QueryClient` per request, hydrate on client
+* avoid module-level singletons across requests
+
+### Performance extras
+
+* `Link preload` or `usePrefetch` for code+data ahead of nav
+* `HydrationBoundary` for heavy client-only islands
+* stream large data via `defer()` to cut TTFB### Project setup
 
 * latest stable: TanStack Start 1.128.6, React 19, Zustand 5, TanStack Query 6
 * pnpm only

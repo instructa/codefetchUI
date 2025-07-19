@@ -3,6 +3,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import { defineConfig, PluginOption } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
 import { cloudflareWorkersDevEnvironmentShim } from 'alchemy/cloudflare';
+import { cloudflare } from '@cloudflare/vite-plugin';
 import viteReact from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -21,6 +22,14 @@ export default defineConfig({
   plugins: [
     tailwindcss() as PluginOption,
     cloudflareWorkersDevEnvironmentShim(),
+    // Add Cloudflare plugin for D1 bindings support
+    cloudflare({
+      persistState: process.env.ALCHEMY_CLOUDFLARE_PERSIST_PATH
+        ? {
+            path: process.env.ALCHEMY_CLOUDFLARE_PERSIST_PATH,
+          }
+        : undefined,
+    }),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),

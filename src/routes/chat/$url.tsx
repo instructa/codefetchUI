@@ -78,6 +78,7 @@ import {
 import { ScrollArea } from '~/components/ui/scroll-area';
 import { MessageSquare } from 'lucide-react';
 import { ModeToggle } from '~/components/mode-toggle';
+import { useRouter } from '@tanstack/react-router';
 
 // Custom hook to detect mobile viewport
 function useIsMobile() {
@@ -205,6 +206,7 @@ function ErrorComponent({ error }: { error: Error }) {
 function ChatRoute() {
   const { isValidUrl, url } = Route.useLoaderData();
   const { file: filePath } = Route.useSearch();
+  const router = useRouter();
 
   if (!isValidUrl) {
     return (
@@ -226,6 +228,7 @@ function ChatRoute() {
 
 function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: string }) {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState<'chat' | 'filters' | 'search'>('filters');
@@ -502,10 +505,63 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
     <>
       {/* Mobile Layout - Hidden on desktop with CSS */}
       <div className="flex md:hidden flex-col h-screen min-h-screen bg-background relative">
+        {/* Mobile Top Bar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold">Codefetch</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={handleCopyToClipboard}
+              disabled={!previewMarkdown}
+            >
+              {copiedToClipboard ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8" disabled={!previewMarkdown}>
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadMarkdown}>
+                  Download as Markdown (.md)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadXML}>
+                  Download as XML (.xml)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8"
+              onClick={() => router.navigate({ to: '/auth/sign-in' })}
+            >
+              Sign In
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8"
+              onClick={() => router.navigate({ to: '/auth/sign-up' })}
+            >
+              Get Started
+            </Button>
+          </div>
+        </div>
+
         {/* Mobile Header */}
         <div className="flex items-center justify-between p-3 border-b bg-background">
           <div className="flex-1 mr-2">
-            <h1 className="text-sm font-medium truncate">{metadata?.title || 'Codefetch'}</h1>
+            <h2 className="text-sm font-medium truncate">{metadata?.title || 'Project'}</h2>
             <p className="text-xs text-muted-foreground truncate">{url}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -535,25 +591,17 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCopyToClipboard} disabled={!previewMarkdown}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  {copiedToClipboard ? 'Copied!' : 'Copy Markdown'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadMarkdown} disabled={!previewMarkdown}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download as MD
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadXML} disabled={!previewMarkdown}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download as XML
+                <DropdownMenuItem onClick={() => setActiveRightTab('preview')}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Show Preview
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
-        {/* Mobile Content Area - Now with padding bottom for fixed nav and footer */}
-        <div className="flex-1 overflow-hidden mb-24">
+        {/* Mobile Content Area - Updated padding for new layout */}
+        <div className="flex-1 overflow-hidden mb-14">
           <Tabs
             value={activeRightTab}
             onValueChange={setActiveRightTab}
@@ -732,10 +780,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
           </Tabs>
         </div>
 
-        {/* Mobile Footer */}
-        <div className="fixed bottom-14 left-0 right-0 z-40">
-          <AppFooter />
-        </div>
+        {/* Removed Mobile Footer */}
 
         {/* Fixed Bottom Tab Navigation */}
         <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
@@ -767,6 +812,92 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
       {/* Desktop Layout - Hidden on mobile with CSS */}
       <div className="hidden md:block w-screen h-screen bg-background">
         <div className="overflow-hidden">
+          {/* Desktop Top Bar */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-background">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">Codefetch</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={handleCopyToClipboard}
+                disabled={!previewMarkdown}
+              >
+                {copiedToClipboard ? (
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 mr-1" />
+                )}
+                {copiedToClipboard ? 'Copied' : 'Copy'}
+              </Button>
+              <div className="flex items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 rounded-r-none border-r-0"
+                  onClick={handleDownloadMarkdown}
+                  disabled={!previewMarkdown}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                  Download
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2 rounded-l-none"
+                      disabled={!previewMarkdown}
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 15 15"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3 w-3"
+                      >
+                        <path
+                          d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z"
+                          fill="currentColor"
+                          fillRule="evenodd"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleDownloadMarkdown}>
+                      Download as Markdown (.md)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadXML}>
+                      Download as XML (.xml)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <ModeToggle />
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8"
+                onClick={() => router.navigate({ to: '/auth/sign-in' })}
+              >
+                Sign In
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-8"
+                onClick={() => router.navigate({ to: '/auth/sign-up' })}
+              >
+                Get Started
+              </Button>
+            </div>
+          </div>
+
           <div
             ref={containerRef}
             className="overflow-visible flex-row flex bg-background"
@@ -775,7 +906,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
             data-panel-group-direction="horizontal"
             data-panel-group-id="block-panel-group"
             style={{
-              height: 'calc(100vh - 32px)',
+              height: 'calc(100vh - 48px)',
               display: 'flex',
               flexDirection: 'row',
               overflow: 'hidden',
@@ -984,66 +1115,6 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
                         </TabsTrigger>
                       </TabsList>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                          onClick={handleCopyToClipboard}
-                          disabled={!previewMarkdown}
-                        >
-                          {copiedToClipboard ? (
-                            <Check className="h-3.5 w-3.5 mr-1" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          {copiedToClipboard ? 'Copied' : 'Copy'}
-                        </Button>
-                        <div className="flex items-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2 rounded-r-none border-r-0"
-                            onClick={handleDownloadMarkdown}
-                            disabled={!previewMarkdown}
-                          >
-                            <Download className="h-3.5 w-3.5 mr-1" />
-                            Download
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-2 rounded-l-none"
-                                disabled={!previewMarkdown}
-                              >
-                                <svg
-                                  width="15"
-                                  height="15"
-                                  viewBox="0 0 15 15"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-3 w-3"
-                                >
-                                  <path
-                                    d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z"
-                                    fill="currentColor"
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={handleDownloadMarkdown}>
-                                Download as Markdown (.md)
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={handleDownloadXML}>
-                                Download as XML (.xml)
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
                         <Select value={selectedPrompt} onValueChange={setSelectedPrompt}>
                           <SelectTrigger size="sm">
                             <SelectValue placeholder="Add prompt" />
@@ -1347,8 +1418,7 @@ function ChatLayout({ url, initialFilePath }: { url: string; initialFilePath?: s
             </div>
           </div>
 
-          {/* Desktop Footer */}
-          <AppFooter />
+          {/* Removed Desktop Footer */}
         </div>
 
         {/* Gemini API Key Modal */}

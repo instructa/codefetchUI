@@ -94,6 +94,7 @@
   "devDependencies": {
     "@ast-grep/napi": "^0.38.7",
     "@cloudflare/unenv-preset": "^2.3.3",
+    "@cloudflare/vite-plugin": "^1.9.6",
     "@cloudflare/workers-types": "latest",
     "@napi-rs/cli": "^2.18.4",
     "@tailwindcss/vite": "^4.1.8",
@@ -112,6 +113,7 @@
     "better-sqlite3": "^12.2.0",
     "class-variance-authority": "^0.7.1",
     "dotenv": "^17.2.0",
+    "knip": "^5.62.0",
     "miniflare": "^4.20250709.0",
     "oxlint": "^1.6.0",
     "prettier": "^3.6.2",

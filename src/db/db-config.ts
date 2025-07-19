@@ -5,15 +5,13 @@ import type { D1Database } from '@cloudflare/workers-types';
 
 type DatabaseName = keyof Pick<CloudflareEnv, 'AUTH_DB' | 'ANALYTICS' | 'DATABASE'>;
 
-function createDbClient(
-  d1: D1Database | undefined,
-  dbName: DatabaseName
-): DrizzleD1Database<typeof schema> {
+function createDbClient(d1: D1Database, dbName: DatabaseName): DrizzleD1Database<typeof schema> {
   if (!d1) {
     throw new Error(
       `D1 binding "${dbName}" is not available – are you running inside the Cloudflare worker?`
     );
   }
+
   return drizzle(d1, {
     schema,
     // Set to false in production if you don't want query logs
@@ -40,7 +38,7 @@ export function getAnalyticsDb(context: CloudflareEnv) {
 }
 
 /**
- * Get a Drizzle-ORM client for the main **DATABASE** D1 database.
+ * Get a Drizzle-ORM client for the **DATABASE** D1 database.
  * @param context - The request context containing Cloudflare env bindings
  * @returns Drizzle ORM client instance
  */

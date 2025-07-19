@@ -125,9 +125,16 @@ const secrets = {
   SESSION_COOKIE_NAME: alchemy.secret(process.env.SESSION_COOKIE_NAME || 'codefetch_session'),
 
   // Email Configuration
+  EMAIL_PROVIDER: alchemy.secret(process.env.EMAIL_PROVIDER || 'console'),
   RESEND_API_KEY: alchemy.secret(process.env.RESEND_API_KEY || ''),
   EMAIL_FROM: alchemy.secret(process.env.EMAIL_FROM || 'noreply@codefetch.dev'),
   ENABLE_EMAIL_VERIFICATION: alchemy.secret(process.env.ENABLE_EMAIL_VERIFICATION || 'false'),
+
+  // SMTP Configuration for worker-mailer
+  SMTP_HOST: alchemy.secret(process.env.SMTP_HOST || ''),
+  SMTP_PORT: alchemy.secret(process.env.SMTP_PORT || '587'),
+  SMTP_USER: alchemy.secret(process.env.SMTP_USER || ''),
+  SMTP_PASS: alchemy.secret(process.env.SMTP_PASS || ''),
 
   // OAuth Providers (optional)
   GITHUB_CLIENT_ID: alchemy.secret(process.env.GITHUB_CLIENT_ID || ''),

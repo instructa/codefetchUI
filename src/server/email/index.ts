@@ -1,3 +1,4 @@
+import type { CloudflareEnv } from '../../../types/env';
 import {
   ConsoleProvider,
   type EmailProvider,
@@ -6,7 +7,47 @@ import {
   SMTPProvider,
 } from './providers';
 
+// Type declaration for WorkerMailer to avoid import errors in Node.js
+type WorkerMailer = {
+  send: (options: {
+    from: { email: string; name?: string };
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+  }) => Promise<void>;
+};
+
 let emailProvider: EmailProvider | null = null;
+let workerMailerInstance: WorkerMailer | null = null;
+
+// Helper to dynamically import and get WorkerMailer instance (memoized)
+async function getMailer(env: CloudflareEnv): Promise<WorkerMailer> {
+  if (workerMailerInstance) {
+    return workerMailerInstance;
+  }
+
+  if (!env.SMTP_HOST) {
+    throw new Error('SMTP_HOST is required for worker-mailer provider');
+  }
+
+  // Dynamically import worker-mailer only when needed (in Cloudflare environment)
+  const { WorkerMailer } = await import('worker-mailer');
+
+  workerMailerInstance = await WorkerMailer.connect({
+    host: env.SMTP_HOST,
+    port: parseInt(env.SMTP_PORT || '587'),
+    secure: env.SMTP_PORT === '465', // Use secure connection for port 465
+    credentials: env.SMTP_USER
+      ? {
+          username: env.SMTP_USER,
+          password: env.SMTP_PASS || '',
+        }
+      : undefined,
+  });
+
+  return workerMailerInstance;
+}
 
 export function getEmailProvider(): EmailProvider {
   if (emailProvider) {
@@ -62,12 +103,39 @@ export async function sendEmail(params: {
   to: string;
   subject: string;
   html: string;
+  env?: CloudflareEnv;
 }) {
+  const { env, ...emailParams } = params;
+
+  // Use worker-mailer if configured and env is provided
+  if (env && env.EMAIL_PROVIDER === 'worker-mailer') {
+    try {
+      const mailer = await getMailer(env);
+      const from = emailParams.from || env.EMAIL_FROM || 'noreply@localhost';
+
+      await mailer.send({
+        from: {
+          email: from,
+          name: from.includes('@') ? from.split('@')[0] : 'No Reply',
+        },
+        to: emailParams.to,
+        subject: emailParams.subject,
+        html: emailParams.html,
+      });
+
+      return;
+    } catch (error) {
+      console.error('Failed to send email with worker-mailer:', error);
+      throw error;
+    }
+  }
+
+  // Fall back to existing providers for local development
   const provider = getEmailProvider();
-  const from = params.from || process.env.EMAIL_FROM || 'noreply@localhost';
+  const from = emailParams.from || process.env.EMAIL_FROM || 'noreply@localhost';
 
   await provider.sendEmail({
-    ...params,
+    ...emailParams,
     from,
   });
 }

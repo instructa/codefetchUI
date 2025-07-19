@@ -12,7 +12,7 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async ({ con
     const { headers } = getWebRequest();
 
     // Get env from context when running on Cloudflare
-    const env = context as CloudflareEnv;
+    const env = (context || {}) as CloudflareEnv;
     const authInstance = createAuth(env);
 
     const session = await authInstance.api.getSession({
@@ -46,7 +46,7 @@ export const signOut = createServerFn({ method: 'POST' }).handler(async ({ conte
     const { headers } = getWebRequest();
 
     // Get env from context when running on Cloudflare
-    const env = context as CloudflareEnv;
+    const env = (context || {}) as CloudflareEnv;
     const authInstance = createAuth(env);
 
     await authInstance.api.signOut({

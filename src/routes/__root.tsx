@@ -8,8 +8,10 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouter,
+  Link,
 } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
+import { AuthUIProvider } from '@daveyplate/better-auth-ui';
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary';
 import { NotFound } from '~/components/NotFound';
 import { ThemeInitScript } from '~/components/theme-init-script';
@@ -100,20 +102,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="">
-        {/* <AuthQueryProvider> */}
         <ThemeProvider initial={initial}>
-          {/* <AuthUIProviderTanstack
-              authClient={authClient}
-              redirectTo="/dashboard"
-              navigate={(href) => router.navigate({ href })}
-              replace={(href) => router.navigate({ href, replace: true })}
-              Link={({ href, ...props }) => <Link to={href} {...props} />}
-            > */}
-          <div className="flex min-h-svh flex-col">{children}</div>
-          <Toaster />
-          {/* </AuthUIProviderTanstack> */}
+          <AuthUIProvider
+            authClient={authClient}
+            redirectTo="/dashboard"
+            navigate={(href) => router.navigate({ to: href })}
+            replace={(href) => router.navigate({ to: href, replace: true })}
+            Link={(props) => {
+              const { href, ...rest } = props;
+              return <Link to={href} {...rest} />;
+            }}
+          >
+            <div className="flex min-h-svh flex-col">{children}</div>
+            <Toaster />
+          </AuthUIProvider>
         </ThemeProvider>
-        {/* </AuthQueryProvider> */}
         <Scripts />
       </body>
     </html>
