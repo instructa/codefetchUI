@@ -81,8 +81,11 @@ const cacheKV = await KVNamespace('cache', {
 // Create D1 database for application data
 const mainDb = await D1Database('main-db', {
   name: `codefetch-ui-db-${app.stage}`,
-  adopt: true,
+  adopt: false,
   migrationsDir: './drizzle/main',
+  dev: {
+    remote: false, // Explicitly run locally in dev mode
+  },
 });
 
 // Analytics database for logging and metrics

@@ -32,7 +32,9 @@ async function getMailer(env: CloudflareEnv): Promise<WorkerMailer> {
   }
 
   // Dynamically import worker-mailer only when needed (in Cloudflare environment)
-  const { WorkerMailer } = await import('worker-mailer');
+  // Use string concatenation to avoid Vite's static analysis
+  const workerMailerModule = 'worker-mailer';
+  const { WorkerMailer } = await import(workerMailerModule);
 
   workerMailerInstance = await WorkerMailer.connect({
     host: env.SMTP_HOST,
